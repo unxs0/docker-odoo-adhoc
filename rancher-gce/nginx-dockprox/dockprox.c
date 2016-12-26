@@ -173,7 +173,7 @@ void GetLabelsByContainerId(char const *cId, char *cEnv)
 	char cURL[256] = {""};
 	//sprintf(cURL,"http://localhost/containers/%.99s/json",cId);
 	//char *js = json_fetch_unixsock(cURL);
-	char cJson[102400];
+	char cJson[1024000];
 	sprintf(cURL,"/containers/%.99s/json",cId);
 	GetJson(cURL,cJson);
 	char *js=cJson;
@@ -218,7 +218,7 @@ void GetJson(char const *cResource,char *cJson)
 {
 	struct sockaddr_un address;
 	int  socket_fd, nbytes;
-	char buffer[102400]={""};
+	char buffer[1024000]={""};
 
 	socket_fd=socket(PF_UNIX, SOCK_STREAM, 0);
 	if(socket_fd<0)
@@ -238,10 +238,10 @@ void GetJson(char const *cResource,char *cJson)
 		exit(4);
  	}
 
-	nbytes=snprintf(buffer,102400,"GET %.127s HTTP/1.1\nHost: localhost\n\n",cResource);
+	nbytes=snprintf(buffer,1023999,"GET %.127s HTTP/1.1\nHost: localhost\n\n",cResource);
 	write(socket_fd,buffer,nbytes);
 
-	nbytes=read(socket_fd,buffer,102400);
+	nbytes=read(socket_fd,buffer,1023999);
 	buffer[nbytes] = 0;
 	//printf("nbytes=%u\n%s",nbytes,buffer);
 
@@ -255,7 +255,7 @@ void GetJson(char const *cResource,char *cJson)
 		for(i=27;j<3&&i<100;i++)
 			if(*(cp+i)=='\n' || *(cp+i)=='\r')
 				j++;
-		sprintf(cJson,"%.102399s",cp+i+1);
+		sprintf(cJson,"%.1023999s",cp+i+1);
 	}
 	else if((cp=strstr(buffer,"Transfer-Encoding: chunked"))!=NULL)
 	{
@@ -265,7 +265,7 @@ void GetJson(char const *cResource,char *cJson)
 			if(*(cp+i)=='\n' || *(cp+i)=='\r')
 				j++;
 		//debug only printf("%d %d\n",i,j);
-		sprintf(cJson,"%.102399s",cp+i+1);
+		sprintf(cJson,"%.1023999s",cp+i+1);
 	}
 
 	close(socket_fd);

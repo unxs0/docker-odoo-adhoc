@@ -16,5 +16,5 @@ RUN /bin/systemctl enable cron
 COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord","-n"]
 
-#docker build -t nginx-dockprox .
-#docker run --restart unless-stopped --name nginx-dockprox -p 80:80 -v /var/run/docker.sock:/var/run/docker.sock:ro -d nginx-dockprox
+#docker build -t unxsio/nginx-dockprox .
+#docker run --restart unless-stopped --name nginx-dockprox -p 80:80 -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginx-dockprox
