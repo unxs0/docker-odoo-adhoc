@@ -16,7 +16,7 @@ void log_die(char *msg, ...)
     va_end(argp);
 
     fprintf(stderr, "\n");
-    abort();
+	exit(1);
 }
 
 void log_info(char *msg, ...)

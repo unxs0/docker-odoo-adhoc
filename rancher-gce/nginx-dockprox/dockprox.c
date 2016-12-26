@@ -22,9 +22,8 @@
 #include "log.h"
 #include "buf.h"
 #include "template.h"
-#define MAXBUFLEN 102400
+#define MAXBUFLEN 102400 //tpl file size max
 
-void GetJson(char const *cResource,char *cJson);
 
 void AppFunctions(FILE *fp,char *cFunction)
 {
@@ -171,13 +170,9 @@ void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 void GetLabelsByContainerId(char const *cId, char *cEnv)
 {
 	char cURL[256] = {""};
-	//sprintf(cURL,"http://localhost/containers/%.99s/json",cId);
-	//char *js = json_fetch_unixsock(cURL);
-	char cJson[1024000];
-	sprintf(cURL,"/containers/%.99s/json",cId);
-	GetJson(cURL,cJson);
-	char *js=cJson;
-	jsmntok_t *tokens = json_tokenise(js);
+	sprintf(cURL,"http://127.0.0.1/containers/%.99s/json",cId);
+	char *cJson = json_fetch_unixsock(cURL);
+	jsmntok_t *tokens = json_tokenise(cJson);
 
 	/*
 	* Format:
@@ -204,86 +199,22 @@ void GetLabelsByContainerId(char const *cId, char *cEnv)
 		j += t->size;
 
 		//print token strings
-		if (t->type == JSMN_STRING && json_token_streq(js, t, "Env"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Env"))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(js, t2);
+			str = json_token_tostr(cJson, t2);
 			sprintf(cEnv,"%.255s",str);
 		}
 	}
 }//void GetLabelsByContainerId(char *cId)
 
 
-void GetJson(char const *cResource,char *cJson)
-{
-	struct sockaddr_un address;
-	int  socket_fd, nbytes;
-	char buffer[1024000]={""};
-
-	socket_fd=socket(PF_UNIX, SOCK_STREAM, 0);
-	if(socket_fd<0)
-	{
-		printf("socket() failed\n");
-		exit(3);
-	}
-
- 	memset(&address,0,sizeof(struct sockaddr_un));
- 	address.sun_family=AF_UNIX;
-#define UNIX_PATH_MAX 256
- 	snprintf(address.sun_path,UNIX_PATH_MAX,"/var/run/docker.sock");
-
-	if(connect(socket_fd,(struct sockaddr *)&address,sizeof(struct sockaddr_un))!= 0)
-	{
-		printf("connect() failed\n");
-		exit(4);
- 	}
-
-	nbytes=snprintf(buffer,1023999,"GET %.127s HTTP/1.1\nHost: localhost\n\n",cResource);
-	write(socket_fd,buffer,nbytes);
-
-	nbytes=read(socket_fd,buffer,1023999);
-	buffer[nbytes] = 0;
-	//printf("nbytes=%u\n%s",nbytes,buffer);
-
-	char *cp=NULL;
-	register int i,j;
-	if((cp=strstr(buffer,"Content-Length: "))!=NULL)
-	{
-
-		//skip 3 lines
-		j=0;
-		for(i=27;j<3&&i<100;i++)
-			if(*(cp+i)=='\n' || *(cp+i)=='\r')
-				j++;
-		sprintf(cJson,"%.1023999s",cp+i+1);
-	}
-	else if((cp=strstr(buffer,"Transfer-Encoding: chunked"))!=NULL)
-	{
-		//skip 4 lines
-		j=0;
-		for(i=27;j<4&&i<100;i++)
-			if(*(cp+i)=='\n' || *(cp+i)=='\r')
-				j++;
-		//debug only printf("%d %d\n",i,j);
-		sprintf(cJson,"%.1023999s",cp+i+1);
-	}
-
-	close(socket_fd);
-
-}//void GetJson()
-
-
 int main(void)
 {
 
-	char cJson[102400];
-	GetJson("/containers/json",cJson);
+	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
 
-	//char cURL[] = "http://localhost/containers/json";
-	//char *js = json_fetch_unixsock(cURL);
-	char *js=cJson;
-	printf("%.99s\n",js);
-	jsmntok_t *tokens = json_tokenise(js);
+	jsmntok_t *tokens = json_tokenise(cJson);
 
 	/* The Docker containers API response is in this format:
 	*
@@ -355,20 +286,20 @@ int main(void)
 		j += t->size;
 
 		//print token strings
-		if (t->type == JSMN_STRING && json_token_streq(js, t, "Id"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(js, t2);
+			str = json_token_tostr(cJson, t2);
 			sprintf(cId,"%.99s",str);
 			cContainerName[0]=0;
 			cContainerIp[0]=0;
 			cVirtualHost[0]=0;
 			GetLabelsByContainerId(cId,cEnv);
 		}
-		if (t->type == JSMN_STRING && json_token_streq(js, t, "io.rancher.container.name"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(js, t2);
+			str = json_token_tostr(cJson, t2);
 			if(strstr(str,"odoo") && !strstr(str,"-db"))
 			{
 				sprintf(cContainerName,"%.128s",str);
@@ -407,10 +338,10 @@ int main(void)
 				}
 			}
 		}
-		if (t->type == JSMN_STRING && json_token_streq(js, t, "io.rancher.container.ip"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.ip"))
 		{
        			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(js, t2);
+			str = json_token_tostr(cJson, t2);
 			sprintf(cContainerIp,"%s",str);
 			char *cp;
 			//chop cidr
