@@ -1,0 +1,277 @@
+{
+  "Id": "a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33",
+  "Created": "2016-12-16T22:24:43.06949005Z",
+  "Path": "/.r/r",
+  "Args": [
+    "/opt/odoo/resources/entrypoint.sh",
+    "odoo.py"
+  ],
+  "State": {
+    "Status": "running",
+    "Running": true,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 3307,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2016-12-19T12:03:05.649628155Z",
+    "FinishedAt": "2016-12-17T15:59:16.889539236Z"
+  },
+  "Image": "sha256:1a0a0c3e91f0accb6cfc93ceb131ede1aac0ef32dad3e7d4be3465e7431fb654",
+  "ResolvConfPath": "/var/lib/docker/containers/a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33/resolv.conf",
+  "HostnamePath": "/var/lib/docker/containers/a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33/hostname",
+  "HostsPath": "/var/lib/docker/containers/a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33/hosts",
+  "LogPath": "/var/lib/docker/containers/a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33/a0dfc6679ff35b21ae2f92473b59bc67cce1ee26261a2c7d1bcbe96022232c33-json.log",
+  "Name": "/r-odoo-simple-odoo-1-e7f0c5bd",
+  "RestartCount": 0,
+  "Driver": "aufs",
+  "MountLabel": "",
+  "ProcessLabel": "",
+  "AppArmorProfile": "",
+  "ExecIDs": null,
+  "HostConfig": {
+    "Binds": [
+      "custom-addons:/opt/odoo/custom-addons:rw",
+      "odoo_data:/opt/odoo/data:rw",
+      "rancher-cni:/.r:ro"
+    ],
+    "ContainerIDFile": "",
+    "LogConfig": {
+      "Type": "json-file",
+      "Config": {}
+    },
+    "NetworkMode": "none",
+    "PortBindings": {},
+    "RestartPolicy": {
+      "Name": "",
+      "MaximumRetryCount": 0
+    },
+    "AutoRemove": false,
+    "VolumeDriver": "",
+    "VolumesFrom": null,
+    "CapAdd": null,
+    "CapDrop": null,
+    "Dns": [
+      "169.254.169.250"
+    ],
+    "DnsOptions": [],
+    "DnsSearch": [
+      "c.adhoc-dev.internal",
+      "google.internal",
+      "odoo-simple.rancher.internal",
+      "odoo.odoo-simple.rancher.internal",
+      "rancher.internal"
+    ],
+    "ExtraHosts": null,
+    "GroupAdd": null,
+    "IpcMode": "",
+    "Cgroup": "",
+    "Links": null,
+    "OomScoreAdj": 0,
+    "PidMode": "",
+    "Privileged": false,
+    "PublishAllPorts": false,
+    "ReadonlyRootfs": false,
+    "SecurityOpt": null,
+    "UTSMode": "",
+    "UsernsMode": "",
+    "ShmSize": 67108864,
+    "Runtime": "runc",
+    "ConsoleSize": [
+      0,
+      0
+    ],
+    "Isolation": "",
+    "CpuShares": 2,
+    "Memory": 0,
+    "CgroupParent": "",
+    "BlkioWeight": 0,
+    "BlkioWeightDevice": null,
+    "BlkioDeviceReadBps": null,
+    "BlkioDeviceWriteBps": null,
+    "BlkioDeviceReadIOps": null,
+    "BlkioDeviceWriteIOps": null,
+    "CpuPeriod": 0,
+    "CpuQuota": 0,
+    "CpusetCpus": "",
+    "CpusetMems": "",
+    "Devices": [],
+    "DiskQuota": 0,
+    "KernelMemory": 0,
+    "MemoryReservation": 0,
+    "MemorySwap": 0,
+    "MemorySwappiness": -1,
+    "OomKillDisable": false,
+    "PidsLimit": 0,
+    "Ulimits": null,
+    "CpuCount": 0,
+    "CpuPercent": 0,
+    "IOMaximumIOps": 0,
+    "IOMaximumBandwidth": 0
+  },
+  "GraphDriver": {
+    "Name": "aufs",
+    "Data": null
+  },
+  "Mounts": [
+    {
+      "Name": "custom-addons",
+      "Source": "/var/lib/docker/volumes/custom-addons/_data",
+      "Destination": "/opt/odoo/custom-addons",
+      "Driver": "local",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Name": "odoo_data",
+      "Source": "/var/lib/docker/volumes/odoo_data/_data",
+      "Destination": "/opt/odoo/data",
+      "Driver": "local",
+      "Mode": "rw",
+      "RW": true,
+      "Propagation": "rprivate"
+    },
+    {
+      "Name": "b8282be8b5398d1b771d599beaefe429bd233ff85069604ae3bf0bd092972e06",
+      "Source": "/var/lib/docker/volumes/b8282be8b5398d1b771d599beaefe429bd233ff85069604ae3bf0bd092972e06/_data",
+      "Destination": "/var/lib/odoo",
+      "Driver": "local",
+      "Mode": "",
+      "RW": true,
+      "Propagation": ""
+    },
+    {
+      "Name": "rancher-cni",
+      "Source": "/var/lib/docker/volumes/rancher-cni/_data",
+      "Destination": "/.r",
+      "Driver": "local",
+      "Mode": "ro",
+      "RW": false,
+      "Propagation": "rprivate"
+    },
+    {
+      "Name": "7e31e20c172cd520035422d96f66a422eb4806b6eab55f3a5e3cd46145b11d3b",
+      "Source": "/var/lib/docker/volumes/7e31e20c172cd520035422d96f66a422eb4806b6eab55f3a5e3cd46145b11d3b/_data",
+      "Destination": "/mnt/extra-addons",
+      "Driver": "local",
+      "Mode": "",
+      "RW": true,
+      "Propagation": ""
+    }
+  ],
+  "Config": {
+    "Hostname": "a0dfc6679ff3",
+    "Domainname": "",
+    "User": "odoo",
+    "AttachStdin": false,
+    "AttachStdout": false,
+    "AttachStderr": false,
+    "ExposedPorts": {
+      "8069/tcp": {},
+      "8071/tcp": {}
+    },
+    "Tty": false,
+    "OpenStdin": false,
+    "StdinOnce": false,
+    "Env": [
+      "VIRTUAL_HOST=odoo0.localhost",
+      "VIRTUAL_PORT=8069",
+      "WORKERS=0",
+      "ADMIN_PASSWORD=admin",
+      "ODOO_VERSION=9.0",
+      "http_proxy=",
+      "https_proxy=",
+      "NO_PROXY=",
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "WKHTMLTOX_X64=http://download.gna.org/wkhtmltopdf/0.12/0.12.1/wkhtmltox-0.12.1_linux-trusty-amd64.deb",
+      "ODOO_RELEASE=20161025",
+      "OPENERP_SERVER=/opt/odoo/etc/odoo.conf",
+      "LANG=en_US.UTF-8",
+      "LANGUAGE=en_US:en",
+      "LC_ALL=en_US.UTF-8",
+      "ETC_DIR=/opt/odoo/etc",
+      "DATA_DIR=/opt/odoo/data",
+      "CUSTOM_ADDONS=/opt/odoo/custom-addons",
+      "EXTRA_ADDONS=/opt/odoo/extra-addons",
+      "RESOURCES=/opt/odoo/resources/",
+      "ODOO_SERVER=odoo.py",
+      "ODOO_CONF=/opt/odoo/etc/odoo.conf",
+      "UNACCENT=True",
+      "PGUSER=odoo",
+      "PGPASSWORD=odoo",
+      "PGHOST=db",
+      "SERVER_MODE=test",
+      "DB_TEMPLATE=template1"
+    ],
+    "Cmd": [
+      "odoo.py"
+    ],
+    "Healthcheck": {},
+    "Image": "adhoc/odoo-ar:9.0",
+    "Volumes": {
+      "/mnt/extra-addons": {},
+      "/opt/odoo/custom-addons": {},
+      "/opt/odoo/data": {},
+      "/var/lib/odoo": {}
+    },
+    "WorkingDir": "/",
+    "Entrypoint": [
+      "/.r/r",
+      "/opt/odoo/resources/entrypoint.sh"
+    ],
+    "OnBuild": null,
+    "Labels": {
+      "io.rancher.cni.network": "ipsec",
+      "io.rancher.cni.wait": "true",
+      "io.rancher.container.ip": "10.42.169.15/16",
+      "io.rancher.container.name": "odoo-simple-odoo-1",
+      "io.rancher.container.network": "false",
+      "io.rancher.container.uuid": "e7f0c5bd-96f0-4c80-949a-7665e31749d1",
+      "io.rancher.project.name": "odoo-simple",
+      "io.rancher.project_service.name": "odoo-simple/odoo",
+      "io.rancher.service.deployment.unit": "6e989c08-4a15-4f9f-804e-f627bf7cb778",
+      "io.rancher.service.hash": "f5b390a54a7b99b10a7fea8e156542a67fd469ff",
+      "io.rancher.service.launch.config": "io.rancher.service.primary.launch.config",
+      "io.rancher.stack.name": "odoo-simple",
+      "io.rancher.stack_service.name": "odoo-simple/odoo"
+    }
+  },
+  "NetworkSettings": {
+    "Bridge": "",
+    "SandboxID": "4330c60f129063d826d66c8239db7b8e406bab81d0c1e13f939e1d7af9893215",
+    "HairpinMode": false,
+    "LinkLocalIPv6Address": "",
+    "LinkLocalIPv6PrefixLen": 0,
+    "Ports": {},
+    "SandboxKey": "/var/run/docker/netns/4330c60f1290",
+    "SecondaryIPAddresses": null,
+    "SecondaryIPv6Addresses": null,
+    "EndpointID": "",
+    "Gateway": "",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "IPAddress": "",
+    "IPPrefixLen": 0,
+    "IPv6Gateway": "",
+    "MacAddress": "",
+    "Networks": {
+      "none": {
+        "IPAMConfig": null,
+        "Links": null,
+        "Aliases": null,
+        "NetworkID": "fdbbdcd7f9c7e34f34c3ed6fa1c64dfc35eb637563576d037d86a6ffcb05ad3c",
+        "EndpointID": "3eae3ca4ed2696347efba168b3e82fb6c00e3660499b92124bafda8912740e3f",
+        "Gateway": "",
+        "IPAddress": "",
+        "IPPrefixLen": 0,
+        "IPv6Gateway": "",
+        "GlobalIPv6Address": "",
+        "GlobalIPv6PrefixLen": 0,
+        "MacAddress": ""
+      }
+    }
+  }
+}

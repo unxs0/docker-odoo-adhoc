@@ -1,0 +1,1 @@
+@{{cVirtualDomain}} {{cVirtualDomain}}@localhost
