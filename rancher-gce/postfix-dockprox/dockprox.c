@@ -31,22 +31,18 @@ void AppFunctions(FILE *fp,char *cFunction)
 
 
 void VirtualAliasesTemplate(FILE *fpOut,
-	char const *cVirtualAlias,
-	char const *cVirtualHost,
+	char const *cVirtualDomain,
 	char const *cContainer)
 {
 	struct t_template template;
 
-	template.cpName[0]="cVirtualAlias";
-	template.cpValue[0]=cVirtualAlias;
+	template.cpName[0]="cVirtualDomain";
+	template.cpValue[0]=cVirtualDomain;
 
-	template.cpName[1]="cVirtualHost";
-	template.cpValue[1]=cVirtualHost;
+	template.cpName[1]="cContainer";
+	template.cpValue[1]=cContainer;
 
-	template.cpName[2]="cContainer";
-	template.cpValue[2]=cContainer;
-
-	template.cpName[3]="";//close template!
+	template.cpName[2]="";//close template!
 
 
 	char cTemplate[MAXBUFLEN + 1];
@@ -72,6 +68,33 @@ void VirtualAliasesTemplate(FILE *fpOut,
 	Template(cTemplate,&template,fpOut);
 
 }//void VirtualAliasesTemplate(FILE *fpOut,...)
+
+
+//Case sensitive
+bool boolParseFromJsonArray(char const *cEnv, char const *cName)
+{
+	//printf("%s\n",cEnv);
+	char cValue[8]={""};
+	char cNamePattern[100]={""};
+	sprintf(cNamePattern,"%.64s=",cName);
+	unsigned uNamePatternStrLen=strlen(cNamePattern);
+	char *cp=strstr(cEnv,cNamePattern);
+	if(cp!=NULL)
+	{
+		//printf("cNamePattern=%s\n",cNamePattern);
+		char *cp2=strchr(cp+uNamePatternStrLen,'\"');
+		if(cp!=NULL)
+		{
+			*cp2=0;
+			sprintf(cValue,"%.7s",cp+uNamePatternStrLen);
+			*cp2='\"';
+			//printf("%s\n",cValue);
+			if(cValue[0]=='t' || cValue[0]=='T')
+				return(true);
+		}
+	}
+	return(false);
+}//bool boolParseFromJsonArray(char const *cEnv, char const *cName)
 
 
 //Case sensitive
@@ -143,8 +166,7 @@ int main(void)
 	char *str;
 	char cId[100]={""};
 	char cContainerName[256]={""};
-	char cVirtualDomain[256]={""};
-	char cVirtualAlias[256]={""};
+	char cVirtualHost[256]={""};
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -167,20 +189,24 @@ int main(void)
 		}
 		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
 		{
+			bool boolVirtualDomain=0;
+			bool boolVirtualAlias=0;
 			jsmntok_t *t2 = &tokens[i+1];
 			str = json_token_tostr(cJson, t2);
 			if(strstr(str,"odoo") && !strstr(str,"-db"))
 			{
 				sprintf(cContainerName,"%.128s",str);
-				fprintf(fp,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-				//debug only printf("cEnv=%s\n",cEnv);
-				ParseFromJsonArray(cEnv,"VIRTUAL_DOMAIN",cVirtualDomain);
-				ParseFromJsonArray(cEnv,"VIRTUAL_ALIAS",cVirtualAlias);
-				if(cVirtualDomain[0])
+				//printf("cEnv=%s\n",cEnv);
+				boolVirtualDomain=boolParseFromJsonArray(cEnv,"VIRTUAL_DOMAIN");
+				boolVirtualAlias=boolParseFromJsonArray(cEnv,"VIRTUAL_ALIAS");
+				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
+				if(boolVirtualAlias && cVirtualHost[0])
 				{
-					VirtualAliasesTemplate(fp,cVirtualAlias,cVirtualDomain,cContainerName);
-					printf("cVirtualDomain=%s\n",cVirtualDomain);
-					printf("cVirtualAlias=%s\n",cVirtualAlias);
+					fprintf(fp,"#cId=%s cContainerName=%s\n",cId,cContainerName);
+					printf("cVirtualHost=%s\n",cVirtualHost);
+					printf("boolVirtualDomain=%d\n",boolVirtualDomain);
+					printf("boolVirtualAlias=%d\n",boolVirtualAlias);
+					VirtualAliasesTemplate(fp,cVirtualHost,cContainerName);
 					printf("cId=%s\n",cId);
 					printf("io.rancher.container.name=%s\n",cContainerName);
 				}
