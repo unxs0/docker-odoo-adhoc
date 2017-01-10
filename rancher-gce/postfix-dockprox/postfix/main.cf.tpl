@@ -1,8 +1,7 @@
 #tpl vars
 # {{cMyHostName}}
 # {{cMyDestination}}
-# {{cRelayHost}}
-# {{uRelayPort}}
+# {{cRelayHostLine}}
 
 smtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)
 biff = no
@@ -31,7 +30,7 @@ virtual_alias_domains = regexp:/etc/postfix/virtual_domains_regex
 virtual_alias_maps = hash:/etc/postfix/virtual_aliases
 
 #relayhost = [smtp.sendgrid.net]:2525
-relayhost = [{{cRelayHost}}]:{{uRelayPort}}
+relayhost = {{cRelayHostLine}}
 smtp_tls_security_level = encrypt
 smtp_sasl_auth_enable = yes
 smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd

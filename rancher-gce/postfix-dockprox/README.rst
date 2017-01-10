@@ -10,10 +10,13 @@ cron is used to reconfigure postfix if changes are picked up from the host node.
 Designed for use with Rancher on a GCE Ubuntu VM.
 
 Uses AdHoc Rancher Catalog Odoo containers what have the special ENV variables for
-configuring postfix for mail proxy: VIRTUAL_ALIAS and VIRTUAL_DOMAIN
+configuring postfix for mail proxy: VIRTUAL_DOMAIN
+
+Rancher AdHoc base catalog item provides other Postfix configuration ENV items. Like myhostname, mydestination
+and relayhost.
 
 
-Shortly
+Details
 -------
 
 Just started nothing ready yet.

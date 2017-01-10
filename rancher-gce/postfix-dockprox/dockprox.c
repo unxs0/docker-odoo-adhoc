@@ -112,6 +112,7 @@ void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 		{
 			*cp2=0;
 			sprintf(cValue,"%.127s",cp+uNamePatternStrLen);
+			*cp2='\"';
 		}
 	}
 }//void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
@@ -189,27 +190,38 @@ int main(void)
 		}
 		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
 		{
-			bool boolVirtualDomain=0;
-			bool boolVirtualAlias=0;
 			jsmntok_t *t2 = &tokens[i+1];
 			str = json_token_tostr(cJson, t2);
 			if(strstr(str,"odoo") && !strstr(str,"-db"))
 			{
 				sprintf(cContainerName,"%.128s",str);
 				//printf("cEnv=%s\n",cEnv);
-				boolVirtualDomain=boolParseFromJsonArray(cEnv,"VIRTUAL_DOMAIN");
-				boolVirtualAlias=boolParseFromJsonArray(cEnv,"VIRTUAL_ALIAS");
 				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
-				if(boolVirtualAlias && cVirtualHost[0])
+				if(cVirtualHost[0])
 				{
 					fprintf(fp,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-					printf("cVirtualHost=%s\n",cVirtualHost);
-					printf("boolVirtualDomain=%d\n",boolVirtualDomain);
-					printf("boolVirtualAlias=%d\n",boolVirtualAlias);
 					VirtualAliasesTemplate(fp,cVirtualHost,cContainerName);
 					printf("cId=%s\n",cId);
-					printf("io.rancher.container.name=%s\n",cContainerName);
+					printf("\tio.rancher.container.name=%s\n",cContainerName);
+					printf("\tcVirtualHost=%s\n",cVirtualHost);
 				}
+			}
+			//This really needs to be run only once on base install
+			else if(strstr(str,"postfix-dockprox"))
+			{
+				char cMyDestination[256]={""};
+				char cMyHostname[256]={""};
+				char cRelayHostLine[256]={""};
+				ParseFromJsonArray(cEnv,"cMyDestination",cMyDestination);
+				ParseFromJsonArray(cEnv,"cMyHostname",cMyHostname);
+				ParseFromJsonArray(cEnv,"cRelayHostLine",cRelayHostLine);
+				sprintf(cContainerName,"%.128s",str);
+				printf("cId=%s\n",cId);
+				printf("\tio.rancher.container.name=%s\n",cContainerName);
+				printf("\tcMyDestination=%s\n",cMyDestination);
+				printf("\tcMyHostname=%s\n",cMyHostname);
+				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
+				//printf("\tcEnv=%s\n",cEnv);
 			}
 		}
 	}
