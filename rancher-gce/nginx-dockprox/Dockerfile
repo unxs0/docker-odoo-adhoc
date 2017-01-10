@@ -1,7 +1,7 @@
 FROM ubuntu
 MAINTAINER docker@unxs.io
 USER root
-RUN apt-get update && apt-get -y -q --no-install-recommends install nginx libcurl4-gnutls-dev cron supervisor \
+RUN apt-get update && apt-get -y -q --no-install-recommends install iputils-ping telnet net-tools nginx libcurl4-gnutls-dev cron supervisor \
 	&& apt-get clean \
 	&& rm -r /var/lib/apt/lists/*
 RUN mkdir -p /var/local/dockprox

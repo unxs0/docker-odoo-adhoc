@@ -162,6 +162,7 @@ void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 		{
 			*cp2=0;
 			sprintf(cValue,"%.127s",cp+uNamePatternStrLen);
+			*cp2='\"';
 		}
 	}
 }//void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
@@ -305,12 +306,13 @@ int main(void)
 				sprintf(cContainerName,"%.128s",str);
 				sprintf(cContainerNameChat,"%.128s-chat",str);
 				fprintf(fp,"#cId=%s\n",cId);
-				//debug only printf("cEnv=%s\n",cEnv);
 				ParseFromJsonArray(cEnv,"VIRTUAL_PORT",cVirtualPort);
 				char cVirtualPorts[8][32]={"","","","","","","",""};
 				unsigned uNumPorts=0;
 				uNumPorts=uSplitPorts(cVirtualPort,cVirtualPorts);
 				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
+//debug only 
+//printf("cEnv=%s\n,cVirtualHost=%s\n",cEnv,cVirtualHost);
 				register int n=0;
 				if(cVirtualHost[0])
 				{
