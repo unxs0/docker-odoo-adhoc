@@ -1,7 +1,7 @@
 #tpl vars
-# {{cMyHostName}}
-# {{cMyDestination}}
-# {{cRelayHostLine}}
+# cMyHostname
+# cMyDestination
+# cRelayHostLine
 
 smtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)
 biff = no
@@ -16,7 +16,7 @@ smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
 smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache
 
 smtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination
-myhostname = {{cMyHostName}}
+myhostname = {{cMyHostname}}
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
 myorigin = /etc/mailname

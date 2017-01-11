@@ -30,6 +30,51 @@ void AppFunctions(FILE *fp,char *cFunction)
 }//void AppFunctions(FILE *fp,char *cFunction)
 
 
+void MainCfTemplate(FILE *fpOut,
+	char const *cContainerName,
+	char const *cMyHostname,
+	char const *cMyDestination,
+	char const *cRelayHostLine)
+{
+	struct t_template template;
+
+	template.cpName[0]="cMyHostname";
+	template.cpValue[0]=cMyHostname;
+
+	template.cpName[1]="cMyDestination";
+	template.cpValue[1]=cMyDestination;
+
+	template.cpName[2]="cRelayHostLine";
+	template.cpValue[2]=cRelayHostLine;
+
+	template.cpName[3]="";//close template!
+
+
+	char cTemplate[MAXBUFLEN + 1];
+	FILE *fp = fopen("/var/local/dockprox/main.cf.tpl", "r");
+	if(fp!=NULL)
+	{
+		size_t newLen=fread(cTemplate,sizeof(char),MAXBUFLEN,fp);
+		if(ferror(fp)!=0)
+		{
+			fputs("Error reading file main.cf.tpl\n", stderr);
+			exit(1);
+		}
+		else
+		{
+			cTemplate[newLen++] = '\0'; /* Just to be safe. */
+		}
+		fclose(fp);
+	}
+	else
+	{
+		fputs("Error opening file /var/local/dockprox/main.cf.tpl\n", stderr);
+	}
+	Template(cTemplate,&template,fpOut);
+
+}//void MainCfTemplate(FILE *fpOut,...)
+
+
 void VirtualAliasesTemplate(FILE *fpOut,
 	char const *cVirtualDomain,
 	char const *cContainer)
@@ -156,12 +201,28 @@ int main(void)
 	jsmntok_t *tokens = json_tokenise(cJson);
 
 	FILE *fp;
-	if((fp=fopen("/etc/postfix/virtual_aliases","w"))==NULL)
+	if((fp=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
 	{
-		fprintf(stderr,"Could not open /etc/postfix/virtual_aliases\n");
+		fprintf(stderr,"Could not open /etc/postfix/virtual_aliases.new\n");
 		exit(2);
 	}
-	printf("Opened /etc/postfix/virtual_aliases for write\n");
+	printf("Opened /etc/postfix/virtual_aliases.new for write\n");
+
+	FILE *fp2;
+	if((fp2=fopen("/etc/postfix/main.cf.new","w"))==NULL)
+	{
+		fprintf(stderr,"Could not open /etc/postfix/main.cf.new\n");
+		exit(3);
+	}
+	printf("Opened /etc/postfix/main.cf.new for write\n");
+
+	FILE *fp3;
+	if((fp3=fopen("/etc/postfix/virtual_domains_regex.new","w"))==NULL)
+	{
+		fprintf(stderr,"Could not open /etc/postfix/virtual_domains_regex.new\n");
+		exit(4);
+	}
+	printf("Opened /etc/postfix/virtual_domains_regex for write\n");
 
 	char cEnv[512]={""};
 	char *str;
@@ -204,6 +265,16 @@ int main(void)
 					printf("cId=%s\n",cId);
 					printf("\tio.rancher.container.name=%s\n",cContainerName);
 					printf("\tcVirtualHost=%s\n",cVirtualHost);
+
+					// /[@.]adhoc\.com\.ar$/
+					// /(.*)adhoc\.com\.ar$/
+
+					fprintf(fp3,"#cId=%s cContainerName=%s\n"
+							"/[@.]%s\n"
+							"/(.*)%s\n",
+								cId,cContainerName,
+								cVirtualHost,
+								cVirtualHost);
 				}
 			}
 			//This really needs to be run only once on base install
@@ -218,15 +289,54 @@ int main(void)
 				sprintf(cContainerName,"%.128s",str);
 				printf("cId=%s\n",cId);
 				printf("\tio.rancher.container.name=%s\n",cContainerName);
-				printf("\tcMyDestination=%s\n",cMyDestination);
 				printf("\tcMyHostname=%s\n",cMyHostname);
+				printf("\tcMyDestination=%s\n",cMyDestination);
 				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
 				//printf("\tcEnv=%s\n",cEnv);
+				MainCfTemplate(fp2,cContainerName,cMyHostname,cMyDestination,cRelayHostLine);
 			}
 		}
 	}
 
 	fclose(fp);
+	fclose(fp2);
+	fclose(fp3);
+
+	//conditionally update and/or reload postfix
+	system("\
+			/usr/bin/diff -q /etc/postfix/virtual_aliases /etc/postfix/virtual_aliases.new > /dev/null;\
+			if [ $? != 0 ];then\
+				echo update virtual_aliases;\
+				cp /etc/postfix/virtual_aliases.new /etc/postfix/virtual_aliases;\
+				/usr/sbin/postmap /etc/postfix/virtual_aliases;\
+			else\
+				echo virtual_aliases nothing new;\
+			fi;\
+			\
+			/usr/bin/diff -q /etc/postfix/virtual_domains_regex /etc/postfix/virtual_domains_regex.new > /dev/null;\
+			if [ $? != 0 ];then\
+				echo update virtual_domains_regex;\
+				cp /etc/postfix/virtual_domains_regex.new /etc/postfix/virtual_domains_regex;\
+				cReload='Yes';\
+			else\
+				echo virtual_domains_regex nothing new;\
+			fi;\
+			\
+			/usr/bin/diff -q /etc/postfix/main.cf /etc/postfix/main.cf.new > /dev/null;\
+			if [ $? != 0 ];then\
+				echo update main.cf;\
+				cp /etc/postfix/main.cf.new /etc/postfix/main.cf;\
+				cReload='Yes';\
+			else\
+				echo main.cf nothing new;\
+			fi;\
+			\
+                        if [ \"$cReload\" = 'Yes' ];then\
+				echo reloading postfix;\
+				/usr/sbin/postfix reload;\
+			fi;\
+		");
+
 	printf("Normal exit\n");
 	return 0;
 }//main()
