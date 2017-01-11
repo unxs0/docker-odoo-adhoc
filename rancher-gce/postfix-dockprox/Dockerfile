@@ -8,8 +8,7 @@ RUN mkdir -p /var/local/dockprox
 COPY ./dockprox /usr/sbin/dockprox
 COPY ./dockprox.cron /var/local/dockprox/dockprox.cron
 COPY ./postfix/virtual_aliases.tpl /var/local/dockprox/virtual_aliases.tpl
-#COPY ./postfix/main.cf.tpl /var/local/dockprox/main.cf.tpl
-#COPY ./postfix/master.cf.tpl /var/local/dockprox/master.cf.tpl
+COPY ./postfix/main.cf.tpl /var/local/dockprox/main.cf.tpl
 RUN /usr/bin/crontab /var/local/dockprox/dockprox.cron
 
 COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf

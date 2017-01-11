@@ -30,6 +30,26 @@ void AppFunctions(FILE *fp,char *cFunction)
 }//void AppFunctions(FILE *fp,char *cFunction)
 
 
+void EscapePeriods(char* cDest,const char* cSrc) 
+{
+	char c;
+
+	while((c = *(cSrc++)))
+	{
+		switch(c)
+		{
+			case '.': 
+				*(cDest++) = '\\';
+				*(cDest++) = '.';
+			break;
+			default:
+				*(cDest++) = c;
+		}
+	}
+	*cDest = '\0';
+}//void EscapePeriods(char* cDest,const char* cSrc)
+
+
 void MainCfTemplate(FILE *fpOut,
 	char const *cContainerName,
 	char const *cMyHostname,
@@ -269,12 +289,14 @@ int main(void)
 					// /[@.]adhoc\.com\.ar$/
 					// /(.*)adhoc\.com\.ar$/
 
+					char cVirtualHostEscaped[512]={""};
+					EscapePeriods(cVirtualHostEscaped,cVirtualHost);
 					fprintf(fp3,"#cId=%s cContainerName=%s\n"
 							"/[@.]%s\n"
 							"/(.*)%s\n",
 								cId,cContainerName,
-								cVirtualHost,
-								cVirtualHost);
+								cVirtualHostEscaped,
+								cVirtualHostEscaped);
 				}
 			}
 			//This really needs to be run only once on base install
