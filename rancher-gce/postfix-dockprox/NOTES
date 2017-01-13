@@ -1,5 +1,6 @@
 sasl passwd from stack install question
 /etc/aliases still missing
-python odoo script
+python odoo script: requires python 2.7?
+	/opt/odoo/openerp_mailgate.py
 system: odoo must create a standard db on entry point exec
 the db name for odoo sun.acme.net is sun.

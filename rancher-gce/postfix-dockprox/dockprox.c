@@ -220,34 +220,43 @@ int main(void)
 
 	jsmntok_t *tokens = json_tokenise(cJson);
 
-	FILE *fp;
-	if((fp=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
+	FILE *fpVirtualAliases;
+	if((fpVirtualAliases=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
 	{
 		fprintf(stderr,"Could not open /etc/postfix/virtual_aliases.new\n");
 		exit(2);
 	}
 	printf("Opened /etc/postfix/virtual_aliases.new for write\n");
 
-	FILE *fp2;
-	if((fp2=fopen("/etc/postfix/main.cf.new","w"))==NULL)
+	FILE *fpMainCF;
+	if((fpMainCF=fopen("/etc/postfix/main.cf.new","w"))==NULL)
 	{
 		fprintf(stderr,"Could not open /etc/postfix/main.cf.new\n");
 		exit(3);
 	}
 	printf("Opened /etc/postfix/main.cf.new for write\n");
 
-	FILE *fp3;
-	if((fp3=fopen("/etc/postfix/virtual_domains_regex.new","w"))==NULL)
+	FILE *fpVirtualDomainRegex;
+	if((fpVirtualDomainRegex=fopen("/etc/postfix/virtual_domains_regex.new","w"))==NULL)
 	{
 		fprintf(stderr,"Could not open /etc/postfix/virtual_domains_regex.new\n");
 		exit(4);
 	}
-	printf("Opened /etc/postfix/virtual_domains_regex for write\n");
+	printf("Opened /etc/postfix/virtual_domains_regex.new for write\n");
+
+	FILE *fpEtcAliases;
+	if((fpEtcAliases=fopen("/etc/aliases.new","w"))==NULL)
+	{
+		fprintf(stderr,"Could not open /etc/aliases.new\n");
+		exit(4);
+	}
+	printf("Opened /etc/aliases.new for write\n");
 
 	char cEnv[512]={""};
 	char *str;
 	char cId[100]={""};
 	char cContainerName[256]={""};
+	char cContainerIp[256]={""};
 	char cVirtualHost[256]={""};
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
@@ -269,6 +278,16 @@ int main(void)
 			cContainerName[0]=0;
 			GetLabelsByContainerId(cId,cEnv);
 		}
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.ip"))
+		{
+       			jsmntok_t *t2 = &tokens[i+1];
+			str = json_token_tostr(cJson, t2);
+			sprintf(cContainerIp,"%s",str);
+			char *cp;
+			//chop cidr
+			if((cp=strchr(cContainerIp,'/'))!=NULL)
+				*cp=0;
+		}
 		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
@@ -280,23 +299,31 @@ int main(void)
 				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
 				if(cVirtualHost[0])
 				{
-					fprintf(fp,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-					VirtualAliasesTemplate(fp,cVirtualHost,cContainerName);
+					fprintf(fpVirtualAliases,"#cId=%s cContainerName=%s\n",cId,cContainerName);
+					VirtualAliasesTemplate(fpVirtualAliases,cVirtualHost,cContainerName);
 					printf("cId=%s\n",cId);
 					printf("\tio.rancher.container.name=%s\n",cContainerName);
 					printf("\tcVirtualHost=%s\n",cVirtualHost);
 
+					// virtual_domains_regex
 					// /[@.]adhoc\.com\.ar$/
 					// /(.*)adhoc\.com\.ar$/
 
 					char cVirtualHostEscaped[512]={""};
 					EscapePeriods(cVirtualHostEscaped,cVirtualHost);
-					fprintf(fp3,"#cId=%s cContainerName=%s\n"
+					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
 							"/[@.]%s\n"
 							"/(.*)%s\n",
 								cId,cContainerName,
 								cVirtualHostEscaped,
 								cVirtualHostEscaped);
+
+					// /etc/aliases.new
+					char cStdDbName[256]={"default"};
+					fprintf(fpEtcAliases,"#cId=%s cContainerName=%s\n",cId,cContainerName);
+					fprintf(fpEtcAliases,
+						"%.64s: \"| /opt/odoo/openerp_mailgate.py  --host=%.64s --port=8069 -d %.64s\"\n",
+							cVirtualHost,cContainerIp,cStdDbName);
 				}
 			}
 			//This really needs to be run only once on base install
@@ -315,17 +342,27 @@ int main(void)
 				printf("\tcMyDestination=%s\n",cMyDestination);
 				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
 				//printf("\tcEnv=%s\n",cEnv);
-				MainCfTemplate(fp2,cContainerName,cMyHostname,cMyDestination,cRelayHostLine);
+				MainCfTemplate(fpMainCF,cContainerName,cMyHostname,cMyDestination,cRelayHostLine);
 			}
 		}
 	}
 
-	fclose(fp);
-	fclose(fp2);
-	fclose(fp3);
+	fclose(fpVirtualAliases);
+	fclose(fpMainCF);
+	fclose(fpVirtualDomainRegex);
+	fclose(fpEtcAliases);
 
 	//conditionally update and/or reload postfix
 	system("\
+			/usr/bin/diff -q /etc/aliases /etc/aliases.new > /dev/null;\
+			if [ $? != 0 ];then\
+				echo update /etc/aliases;\
+				cp /etc/aliases.new /etc/aliases;\
+				/usr/sbin/newalias;\
+			else\
+				echo virtual_aliases nothing new;\
+			fi;\
+			\
 			/usr/bin/diff -q /etc/postfix/virtual_aliases /etc/postfix/virtual_aliases.new > /dev/null;\
 			if [ $? != 0 ];then\
 				echo update virtual_aliases;\
