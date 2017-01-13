@@ -358,7 +358,7 @@ int main(void)
 			if [ $? != 0 ];then\
 				echo update /etc/aliases;\
 				cp /etc/aliases.new /etc/aliases;\
-				/usr/sbin/newalias;\
+				/usr/bin/newaliases;\
 			else\
 				echo virtual_aliases nothing new;\
 			fi;\
