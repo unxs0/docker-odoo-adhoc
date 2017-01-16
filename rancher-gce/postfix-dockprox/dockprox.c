@@ -252,6 +252,14 @@ int main(void)
 	}
 	printf("Opened /etc/aliases.new for write\n");
 
+	FILE *fpSASLPasswd;
+	if((fpSASLPasswd=fopen("/etc/postfix/sasl_passwd.new","w"))==NULL)
+	{
+		fprintf(stderr,"Could not open /etc/postfix/sasl_passwd.new\n");
+		exit(4);
+	}
+	printf("Opened /etc/postfix/sasl_passwd.new for write\n");
+
 	char cEnv[512]={""};
 	char *str;
 	char cId[100]={""};
@@ -332,17 +340,51 @@ int main(void)
 				char cMyDestination[256]={""};
 				char cMyHostname[256]={""};
 				char cRelayHostLine[256]={""};
+				char cRelaySASLUser[256]={""};
+				char cRelaySASLPasswd[256]={""};
 				ParseFromJsonArray(cEnv,"cMyDestination",cMyDestination);
 				ParseFromJsonArray(cEnv,"cMyHostname",cMyHostname);
 				ParseFromJsonArray(cEnv,"cRelayHostLine",cRelayHostLine);
+				ParseFromJsonArray(cEnv,"cRelaySASLUser",cRelaySASLUser);
+				ParseFromJsonArray(cEnv,"cRelaySASLPasswd",cRelaySASLPasswd);
 				sprintf(cContainerName,"%.128s",str);
 				printf("cId=%s\n",cId);
 				printf("\tio.rancher.container.name=%s\n",cContainerName);
 				printf("\tcMyHostname=%s\n",cMyHostname);
 				printf("\tcMyDestination=%s\n",cMyDestination);
-				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
 				//printf("\tcEnv=%s\n",cEnv);
+				if(!cMyHostname[0])
+				{
+					FILE *pfp;
+					char cResponse[256]={""};
+					if((pfp=popen("/bin/hostname -f","r"))!=NULL)
+					{
+						if(fscanf(pfp,"%255s",cResponse)>0)
+						{
+							sprintf(cMyHostname,"%.99s",cResponse);
+							printf("\thostname -f cMyHostname=%s\n",cMyHostname);
+						}
+					}
+				}
+				if(!cMyDestination[0])
+					sprintf(cMyDestination,"%s,localhost",cMyHostname);
 				MainCfTemplate(fpMainCF,cContainerName,cMyHostname,cMyDestination,cRelayHostLine);
+
+				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
+				printf("\tcRelaySASLUser=%s\n",cRelaySASLUser);
+				printf("\tcRelaySASLPasswd=%s\n",cRelaySASLPasswd);
+				if(cRelayHostLine[0] && cRelaySASLUser[0] && cRelaySASLPasswd[0])
+				{
+					printf("\tUsing relayhost\n");
+					fprintf(fpSASLPasswd,"#cId=%s cContainerName=%s\n",cId,cContainerName);
+					//create SASL password file /etc/postfix/sasl_passwd entry
+					fprintf(fpSASLPasswd,"%.99s %.99s:%.99s\n",cRelayHostLine,cRelaySASLUser,cRelaySASLPasswd);
+					//hash it later in bash script below
+				}
+				else
+				{
+					printf("\tNot using relayhost. Missing at least 1 of 3 requirements.\n");
+				}
 			}
 		}
 	}
@@ -351,6 +393,7 @@ int main(void)
 	fclose(fpMainCF);
 	fclose(fpVirtualDomainRegex);
 	fclose(fpEtcAliases);
+	fclose(fpSASLPasswd);
 
 	//conditionally update and/or reload postfix
 	system("\
@@ -360,7 +403,7 @@ int main(void)
 				cp /etc/aliases.new /etc/aliases;\
 				/usr/bin/newaliases;\
 			else\
-				echo virtual_aliases nothing new;\
+				echo /etc/aliases nothing new;\
 			fi;\
 			\
 			/usr/bin/diff -q /etc/postfix/virtual_aliases /etc/postfix/virtual_aliases.new > /dev/null;\
@@ -393,6 +436,15 @@ int main(void)
                         if [ \"$cReload\" = 'Yes' ];then\
 				echo reloading postfix;\
 				/usr/sbin/postfix reload;\
+			fi;\
+			\
+			/usr/bin/diff -q  /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.new > /dev/null;\
+			if [ $? != 0 ];then\
+				echo update sasl_passwd;\
+				cp /etc/postfix/sasl_passwd.new /etc/postfix/sasl_passwd;\
+				/usr/sbin/postmap /etc/postfix/sasl_passwd;\
+			else\
+				echo sasl_passwd nothing new;\
 			fi;\
 		");
 
