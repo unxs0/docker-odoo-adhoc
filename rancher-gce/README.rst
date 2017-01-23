@@ -12,6 +12,9 @@ After starting your GCE Ubuntu Xenial instance you will need to install docker::
     pip install --upgrade pip
     locale-gen en_US.UTF-8 && update-locale
     echo 'LANG="en_US.UTF-8"' > /etc/default/locale
+    export LC_ALL="en_US.UTF-8"
+    export LC_CTYPE="en_US.UTF-8"
+    dpkg-reconfigure locales
     pip install --upgrade pip
     pip install --upgrade docker-compose
     curl -sSL https://get.docker.com/ | sh
