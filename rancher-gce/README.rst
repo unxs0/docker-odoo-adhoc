@@ -9,8 +9,9 @@ GCE VM Post Start Setup
 After starting your GCE Ubuntu Xenial instance you will need to install docker::
 
     apt-get update && apt-get install -y python-pip git
-    pip install --upgrade pip
-    locale-gen en_US.UTF-8 && update-locale
+    export LC_ALL="en_US.UTF-8"
+    export LC_CTYPE="en_US.UTF-8"
+    dpkg-reconfigure locales
     echo 'LANG="en_US.UTF-8"' > /etc/default/locale
     pip install --upgrade pip
     pip install --upgrade docker-compose
