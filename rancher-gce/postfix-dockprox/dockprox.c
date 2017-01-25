@@ -313,19 +313,6 @@ int main(void)
 					printf("\tio.rancher.container.name=%s\n",cContainerName);
 					printf("\tcVirtualHost=%s\n",cVirtualHost);
 
-					// virtual_domains_regex
-					// /[@.]adhoc\.com\.ar$/
-					// /(.*)adhoc\.com\.ar$/
-
-					char cVirtualHostEscaped[512]={""};
-					EscapePeriods(cVirtualHostEscaped,cVirtualHost);
-					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
-							"/[@.]%s\n"
-							"/(.*)%s\n",
-								cId,cContainerName,
-								cVirtualHostEscaped,
-								cVirtualHostEscaped);
-
 					// /etc/aliases.new
 					char cStdDbName[256]={"default"};
 					fprintf(fpEtcAliases,"#cId=%s cContainerName=%s\n",cId,cContainerName);
@@ -342,11 +329,15 @@ int main(void)
 				char cRelayHostLine[256]={""};
 				char cRelaySASLUser[256]={""};
 				char cRelaySASLPasswd[256]={""};
+				char cDomainsRegex1[256]={""};
+				char cDomainsRegex2[256]={""};
 				ParseFromJsonArray(cEnv,"cMyDestination",cMyDestination);
 				ParseFromJsonArray(cEnv,"cMyHostname",cMyHostname);
 				ParseFromJsonArray(cEnv,"cRelayHostLine",cRelayHostLine);
 				ParseFromJsonArray(cEnv,"cRelaySASLUser",cRelaySASLUser);
 				ParseFromJsonArray(cEnv,"cRelaySASLPasswd",cRelaySASLPasswd);
+				ParseFromJsonArray(cEnv,"cDomainsRegex1",cDomainsRegex1);
+				ParseFromJsonArray(cEnv,"cDomainsRegex2",cDomainsRegex2);
 				sprintf(cContainerName,"%.128s",str);
 				printf("cId=%s\n",cId);
 				printf("\tio.rancher.container.name=%s\n",cContainerName);
@@ -385,6 +376,40 @@ int main(void)
 				{
 					printf("\tNot using relayhost. Missing at least 1 of 3 requirements.\n");
 				}
+
+				if(cDomainsRegex1[0])
+				{
+
+					// virtual_domains_regex
+					// /[@.]adhoc\.com\.ar$/
+					// /(.*)adhoc\.com\.ar$/
+
+					char cDomainsRegexEscaped[512]={""};
+					EscapePeriods(cDomainsRegexEscaped,cDomainsRegex1);
+					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
+							"/[@.]%s$/\n"
+							"/(.*)%s$/\n",
+								cId,cContainerName,
+								cDomainsRegexEscaped,
+								cDomainsRegexEscaped);
+				}
+				if(cDomainsRegex2[0])
+				{
+
+					// virtual_domains_regex
+					// /[@.]adhoc\.com\.ar$/
+					// /(.*)adhoc\.com\.ar$/
+
+					char cDomainsRegexEscaped[512]={""};
+					EscapePeriods(cDomainsRegexEscaped,cDomainsRegex2);
+					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
+							"/[@.]%s$/\n"
+							"/(.*)%s$/\n",
+								cId,cContainerName,
+								cDomainsRegexEscaped,
+								cDomainsRegexEscaped);
+				}
+
 			}
 		}
 	}

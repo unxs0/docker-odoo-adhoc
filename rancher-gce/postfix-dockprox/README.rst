@@ -12,8 +12,8 @@ Designed for use with Rancher on a GCE Ubuntu VM.
 Uses AdHoc Rancher Catalog Odoo containers what have the special ENV variables for
 configuring postfix for mail proxy: VIRTUAL_DOMAIN
 
-Rancher AdHoc base catalog item provides other Postfix configuration ENV items. Like myhostname, mydestination
-and relayhost.
+Rancher AdHoc base catalog item provides other Postfix configuration ENV items. Like myhostname, mydestination,
+relayhost, and the sasl user and sasl password for use with the relayhost.
 
 
 Details

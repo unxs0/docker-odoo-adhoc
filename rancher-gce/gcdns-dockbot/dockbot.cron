@@ -1,0 +1,2 @@
+#check docker every 2 minutes
+*/2 * * * * /usr/sbin/dockbot > /tmp/dockbot.cron.log 2>&1;
