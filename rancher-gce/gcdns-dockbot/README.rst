@@ -3,8 +3,6 @@ Rancher GCE Google Cloud DNS Robot
 
 Adds public IP A record for docker containers as they are created.
 
-Must have Google Cloud credentials and add the auth token one time.
-
 
 dockbot program
 ----------------
@@ -27,15 +25,15 @@ be able to figure out how to parse any Docker or Rancher label name/value data.
 Using
 -----
 
+Place your Google Cloud credential json file on the host node here:
+
+    /var/local/dockprox/gc-credentials.json 
+
 Edit dockbot.c then::
 
     make
     docker build -t gcdns-dockbot .
-    docker run --restart unless-stopped --name gcdns-dockbot -p 25:25 -v /var/run/docker.sock:/var/run/docker.sock:ro -d gcdns-dockbot
-
-Before it will be functional you will need to authorize gcloud client::
-
-    docker exec -ti gcdns-dockbot /google-cloud-sdk/bin/gcloud auth login
+    docker run --restart unless-stopped --name gcdns-dockbot --env cGCDNSProject=myproj-dev -v /var/run/docker.sock:/var/run/docker.sock:ro -v /var/local/dockprox:/var/local/dockprox -d unxsio/gcdns-dockbot
 
 Help
 ----

@@ -1,9 +1,10 @@
 #!/bin/bash
 
 #for cHost in host0 host1 host2; do
-for cHost in host0 host1; do
+#for cHost in host0 host1; do
+for cHost in host0 ; do
 	echo $cHost;
-	docker-machine create -d virtualbox --virtualbox-boot2docker-url file:///home/unxs/.docker/machine/cache/rancheros.iso $cHost;
+	docker-machine create -d virtualbox --virtualbox-memory 2048 --virtualbox-boot2docker-url file:///home/unxs/.docker/machine/cache/rancheros.iso $cHost;
 	if [ "$?" != "0" ];then
 		echo "error create 0. trying to fix...";
 		docker-machine regenerate-certs --force $cHost;

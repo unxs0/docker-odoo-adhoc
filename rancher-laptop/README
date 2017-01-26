@@ -15,3 +15,10 @@ NOTES
 	You may need to snat/masq iptables the virtualbox device
 AUTHOR
 	+Gary Wallis (C) 2016 for AdHoc Ing. S.A.
+
+WORKFLOW
+	1-. get registry working and loaded.
+	2-. create the rancher server, test, infra:hosts:add host get reg key.
+	3-. create the vm hosts.
+	4-. install the vm hosts using key from 2-.
+	5-. check to see if the hosts are registered.
