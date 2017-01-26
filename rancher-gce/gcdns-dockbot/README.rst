@@ -35,11 +35,12 @@ Edit dockbot.c then::
 
     make
     docker build -t gcdns-dockbot .
-    docker run --restart unless-stopped --name gcdns-dockbot --env cGCDNSProject=myproj-dev -v /var/run/docker.sock:/var/run/docker.sock:ro -v /var/local/dockprox:/var/local/dockprox -d unxsio/gcdns-dockbot
+    docker run --restart unless-stopped --name gcdns-dockbot --env cGCDNSProject=myproj-dev --env cGCDNSZone=zonename-com -v /var/run/docker.sock:/var/run/docker.sock:ro -v /var/local/dockprox:/var/local/dockprox -d unxsio/gcdns-dockbot
 
 Required environment vars::
 
     cGCDNSZone: This is the Google Cloud DNS zone that all operations will be performed on. This will be set via Docker compose directly or via rancher compose stack var.
+    cGCDNSProject: This must match your json credentials as far as having perms to do DNS changes on cGCDNSZone.
 
 Help
 ----
