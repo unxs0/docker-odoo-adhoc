@@ -1,7 +1,7 @@
 version: '2'
 services:
     db:
-        image: postgres:9.5
+        image: registry.unxs.io:5000/postgres:9.5
         environment:
             - POSTGRES_USER=odoo
             - POSTGRES_PASSWORD=odoo
@@ -12,7 +12,7 @@ services:
         #     context: ./data
         #     dockerfile: Dockerfile-dev-$ODOO_VERSION
         # TODO ver como hacemos par que esto se cambie desde otro lugar
-        image: $ODOO_IMAGE:$ODOO_VERSION
+        image: registry.unxs.io:5000/$ODOO_IMAGE:$ODOO_VERSION
         external_links:
             - aeroo-docs:aeroo
         depends_on:

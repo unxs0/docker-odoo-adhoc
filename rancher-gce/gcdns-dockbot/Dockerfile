@@ -10,12 +10,11 @@ RUN tar xzf google-cloud-sdk-140.0.0-linux-x86_64.tar.gz > /dev/null 2>&1 && rm 
 RUN mkdir -p /var/local/dockbot
 COPY ./dockbot /usr/sbin/dockbot
 COPY ./dockbot.cron /var/local/dockbot/dockbot.cron
+COPY ./gcloudauth.sh /usr/bin/gcloudauth.sh
 RUN /usr/bin/crontab /var/local/dockbot/dockbot.cron
 
 COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord","-n"]
 
 #docker build -t unxsio/gcdns-dockbot .
-#docker run --restart unless-stopped --name gcdns-dockbot -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/gcdns-dockbot
-#you will need to authorize to get it to work
-#docker exec -ti gcdns-dockbot /google-cloud-sdk/bin/gcloud auth login
+#docker run --restart unless-stopped --name gcdns-dockbot --env cGCDNSProject=adhoc-dev -v /var/run/docker.sock:/var/run/docker.sock:ro -v /var/local/dockprox:/var/local/dockprox -d unxsio/gcdns-dockbot
