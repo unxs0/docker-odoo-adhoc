@@ -16,12 +16,14 @@ Designed to limit dependencies and be very fast and lightweight.
 
 In the provided case for adding GC DNS A records for new containers.
 
-Uses io.rancher labels and other docker API data to configure.
+This is done via simple embedded /bin/sh system script.
+
+Uses io.rancher labels, env vars and other docker API data to configure.
 
 Easy to modify
 --------------
 
-With very basic C language skills dockbot.c is easy to change to suit your own needs. You should
+With very basic C language and shell scripting skills required. dockbot.c is easy to change to suit your own needs. You should
 be able to figure out how to parse any Docker or Rancher label name/value data.
 
 Using
@@ -36,6 +38,10 @@ Edit dockbot.c then::
 Before it will be functional you will need to authorize gcloud client::
 
     docker exec -ti gcdns-dockbot /google-cloud-sdk/bin/gcloud auth login
+
+Required environment vars::
+
+    cGCDNSZone: This is the Google Cloud DNS zone that all operations will be performed on. This will be set via Docker compose directly or via rancher compose stack var.
 
 Help
 ----

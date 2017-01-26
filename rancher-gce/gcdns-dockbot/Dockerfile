@@ -17,3 +17,5 @@ CMD ["/usr/bin/supervisord","-n"]
 
 #docker build -t unxsio/gcdns-dockbot .
 #docker run --restart unless-stopped --name gcdns-dockbot -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/gcdns-dockbot
+#you will need to authorize to get it to work
+#docker exec -ti gcdns-dockbot /google-cloud-sdk/bin/gcloud auth login

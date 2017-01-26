@@ -22,6 +22,29 @@
 #include "log.h"
 #include "buf.h"
 
+//get public ip using curl 
+unsigned uGetPublicIp(char *cIP)
+{
+	FILE *pfp;
+	unsigned a,b,c,d;
+	char cQuery[256]={""};
+
+	sprintf(cQuery,"/usr/bin/curl -s ipinfo.io/ip 2>/dev/null");
+	if((pfp=popen(cQuery,"r"))==NULL)
+	{
+		return(1);
+	}
+	if(fscanf(pfp,"%u.%u.%u.%u",&a,&b,&c,&d)<4)
+	{
+		return(2);
+	}
+	pclose(pfp);
+
+	sprintf(cIP,"%u.%u.%u.%u",a,b,c,d);
+	return(0);
+
+}//unsigned uGetPublicIp(char *cIP)
+
 
 //Case sensitive
 bool boolParseFromJsonArray(char const *cEnv, char const *cName)
@@ -163,6 +186,11 @@ int main(void)
 					char cCommand[4096]={""};
 					char cPublicIp[32]={"1.2.3.4"};
 					char cZone[100]={"sistemasadhoc-com"};
+					uGetPublicIp(cPublicIp);
+					char *cGCDNSZone=NULL;
+					cGCDNSZone=getenv("cGCDNSZone");
+					if(cGCDNSZone&&cGCDNSZone[0])
+						sprintf(cZone,"%.99s",cGCDNSZone);
 
 sprintf(cCommand,"\
 	grep %2$s /tmp/alreadyadded.txt > /dev/null;\
@@ -180,7 +208,7 @@ sprintf(cCommand,"\
 	fi;\
 	\n\
 	\n\
-	/google-cloud-sdk/bin/gcloud dns record-sets transaction add --zone=%1$s --name='public.%2$s.' --type=A --ttl=300 %3$s;\
+	/google-cloud-sdk/bin/gcloud dns record-sets transaction add --zone=%1$s --name='%2$s.' --type=A --ttl=300 %3$s;\
 	if [ $? != 0 ];then\
 		echo error2 aborting!;\
 		/google-cloud-sdk/bin/gcloud dns record-sets transaction abort --zone=%1$s;\
