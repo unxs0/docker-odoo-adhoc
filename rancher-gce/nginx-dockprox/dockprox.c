@@ -1,7 +1,7 @@
 /*
  *FILE
  *PURPOSE
- *	Very initial and simplistic hardcoded AdHoc Odoo docker data parser
+ *	Very simplistic hardcoded AdHoc Odoo docker data parser
  *	for creating Nginx conf.d file
  *AUTHOR/LEGAL
  *	(C) Gary Wallis for AdHoc Ing. S.A. 2016-2017
@@ -28,6 +28,7 @@
 void AppFunctions(FILE *fp,char *cFunction)
 {
 }//void AppFunctions(FILE *fp,char *cFunction)
+
 
 void UpstreamConfTemplate(FILE *fpOut,
 		char const *cUpstreamServerName,
@@ -147,7 +148,31 @@ unsigned uSplitPorts(char const *cVirtualPort,char cVirtualPorts[8][32])
 
 }//unsigned uSplitPorts(char const *cVirtualPort,char cVirtualPorts[8][32])
 
-//Case sensitive
+
+//Case sensitive name/value list
+// "io.rancher.service.launch.config":"io.rancher.service.primary.launch.config",...
+void ParseFromJsonList(char const *cList, char const *cName, char *cValue)
+{
+	cValue[0]=0;
+	char cNamePattern[100]={""};
+	sprintf(cNamePattern,"%.64s\":\"",cName);
+	unsigned uNamePatternStrLen=strlen(cNamePattern);
+	char *cp=strstr(cList,cNamePattern);
+	if(cp!=NULL)
+	{
+		char *cp2=strchr(cp+uNamePatternStrLen,'\"');
+		if(cp!=NULL)
+		{
+			*cp2=0;
+			sprintf(cValue,"%.255s",cp+uNamePatternStrLen);
+			*cp2='\"';
+		}
+	}
+}//void ParseFromJsonList(char const *cEnv, char const *cName, char *cValue)
+
+
+//Case sensitive ENV type list/array
+// "SOMETHING=THIS","ANOTHER=THAT",...
 void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 {
 	cValue[0]=0;
@@ -161,31 +186,19 @@ void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 		if(cp!=NULL)
 		{
 			*cp2=0;
-			sprintf(cValue,"%.127s",cp+uNamePatternStrLen);
+			sprintf(cValue,"%.255s",cp+uNamePatternStrLen);
 			*cp2='\"';
 		}
 	}
 }//void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 
 
-void GetLabelsByContainerId(char const *cId, char *cEnv)
+void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 {
 	char cURL[256] = {""};
 	sprintf(cURL,"http://127.0.0.1/containers/%.99s/json",cId);
 	char *cJson = json_fetch_unixsock(cURL);
 	jsmntok_t *tokens = json_tokenise(cJson);
-
-	/*
-	* Format:
-	*
-	*	"Env": [
-	*		"VIRTUAL_HOST=odoo0.localhost",
-	*		"VIRTUAL_PORT=8069",
-	*		...,
-	*	],
-	*	...,
-	*
-	*/
 
 	char *str;
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
@@ -200,59 +213,18 @@ void GetLabelsByContainerId(char const *cId, char *cEnv)
 		j += t->size;
 
 		//print token strings
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Env"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson,t,(char *)cName))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
 			str = json_token_tostr(cJson, t2);
-			sprintf(cEnv,"%.255s",str);
+			sprintf(cData,"%.4095s",str);
 		}
 	}
-}//void GetLabelsByContainerId(char *cId)
+}//void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 
 
 int main(void)
 {
-
-	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
-
-	jsmntok_t *tokens = json_tokenise(cJson);
-
-	/* The Docker containers API response is in this format:
-	*
-	* [
-	*   {
-	*      ...,
-	*      "Names": [
-	*              "/r-base-nginx-proxy-1-5c11f051"
-	*      ],
-	*      ...,
-	*      "Labels": {
-	*        ...,
-	*        "io.rancher.container.ip": "10.42.19.155/16",
-	*        ...,
-	*        "io.rancher.container.name": "base-nginx-proxy-1",
-	*      },
-	*      ...,
-	*   },
-	*   {
-	*      ...,
-	*      "Names": [
-	*              "/r-base-nginx-proxy-2-5caaf051"
-	*      ],
-	*      ...,
-	*      "Labels": {
-	*        ...,
-	*        "io.rancher.container.ip": "10.42.19.156/16",
-	*        ...,
-	*        "io.rancher.container.name": "base-nginx-proxy-2",
-	*      },
-	*      ...,
-	*   },
-	*   ...,
-	* ]
-	*
-	*/
-
 	if(system("if [  -f /etc/nginx/conf.d/docker.conf ];then cp /etc/nginx/conf.d/docker.conf /etc/nginx/conf.d/docker.conf.0;fi"))
 	{
 		fprintf(stderr,"Could not copy /etc/nginx/conf.d/docker.conf\n");
@@ -267,14 +239,10 @@ int main(void)
 	}
 	printf("Opened /etc/nginx/conf.d/docker.conf for write\n");
 
-	char cId[100]={""};
-	char cContainerName[256]={""};
-	char cContainerNameChat[256]={""};
-	char cContainerIp[256]={""};
-	char cEnv[512]={""};
-	char cVirtualHost[128]={""};
-	char cVirtualPort[128]={""};
-	char *str;
+
+	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
+
+	jsmntok_t *tokens = json_tokenise(cJson);
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -289,66 +257,59 @@ int main(void)
 		//print token strings
 		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
 		{
-			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			sprintf(cId,"%.99s",str);
-			cContainerName[0]=0;
-			cContainerIp[0]=0;
-			cVirtualHost[0]=0;
-			GetLabelsByContainerId(cId,cEnv);
-		}
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
-		{
-			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			if(strstr(str,"odoo") && !strstr(str,"-db"))
-			{
-				sprintf(cContainerName,"%.128s",str);
-				sprintf(cContainerNameChat,"%.128s-chat",str);
-				fprintf(fp,"#cId=%s\n",cId);
-				ParseFromJsonArray(cEnv,"VIRTUAL_PORT",cVirtualPort);
-				char cVirtualPorts[8][32]={"","","","","","","",""};
-				unsigned uNumPorts=0;
-				uNumPorts=uSplitPorts(cVirtualPort,cVirtualPorts);
-				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
-//debug only 
-//printf("cEnv=%s\n,cVirtualHost=%s\n",cEnv,cVirtualHost);
-				register int n=0;
-				if(cVirtualHost[0])
-				{
-					for(n=0;n<uNumPorts&&n<8;n++)
-					{
-						if(n==0)
-							UpstreamConfTemplate(fp,cContainerName,cContainerIp,cVirtualPorts[n]);
-						else
-							UpstreamConfTemplate(fp,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
-					}
-					ServerConfTemplate(fp,cVirtualHost,cContainerName,cContainerNameChat);
-					fprintf(fp,"#cId=%s\n\n",cId);
+			char cContainerName[256]={""};
+			char cContainerNameChat[256]={""};
+			char cStackName[256]={""};
+			char cContainerIp[256]={""};
+			char cVirtualHost[256]={""};
+			char cVirtualPort[256]={""};
 
-					printf("cVirtualHost=%s\n",cVirtualHost);
-					printf("cVirtualPort=%s\n",cVirtualPort);
-					printf("cId=%s\n",cId);
-					printf("io.rancher.container.name=%s\n",cContainerName);
-					printf("io.rancher.container.ip=%s\n",cContainerIp);
-					//debug only uNumPorts=uSplitPorts("8069,8073,8080",cVirtualPorts);
-					printf("uNumPorts=%u\n",uNumPorts);
-					for(n=0;n<uNumPorts&&n<8;n++)
-					{
-						printf("cVirtualPorts[%d]=%s\n",n,cVirtualPorts[n]);
-					}
+			jsmntok_t *t2 = &tokens[i+1];
+			char *cID= json_token_tostr(cJson, t2);
+			//printf("%.255s\n",cID);
+			char cData[4096]={""};
+			GetDataByContainerId(cID,"Labels",cData);
+			//printf("%.4095s\n",cData);
+			ParseFromJsonList(cData,"io.rancher.container.name",cContainerName);
+			sprintf(cContainerNameChat,"%.248s-chat",cContainerName);
+			ParseFromJsonList(cData,"io.rancher.stack.name",cStackName);
+			//printf("\tcContainerName=%s\n",cContainerName);
+			//printf("\tcStackName=%s\n",cStackName);
+			ParseFromJsonList(cData,"io.rancher.container.ip",cContainerIp);
+			char *cp;
+			if((cp=strchr(cContainerIp,'/'))) *cp=0;
+			//printf("\tcContainerIp=%s\n",cContainerIp);
+
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"VIRTUAL_PORT",cVirtualPort);
+			char cVirtualPorts[8][32]={"","","","","","","",""};
+			unsigned uNumPorts=0;
+			uNumPorts=uSplitPorts(cVirtualPort,cVirtualPorts);
+			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
+			//printf("\tcVirtualPort=%s\n",cVirtualPort);
+			//printf("\tcVirtualHost=%s\n",cVirtualHost);
+
+			if(cVirtualHost[0])
+			{
+				fprintf(fp,"#cID=%s\n\n",cID);
+				register int n;
+				for(n=0;n<uNumPorts&&n<8;n++)
+				{
+					if(n==0)
+						UpstreamConfTemplate(fp,cContainerName,cContainerIp,cVirtualPorts[n]);
+					else
+						UpstreamConfTemplate(fp,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
+				}
+				ServerConfTemplate(fp,cVirtualHost,cContainerName,cContainerNameChat);
+				printf("cID=%s\n",cID);
+				printf("cVirtualHost=%s\n",cVirtualHost);
+				printf("cVirtualPort=%s\n",cVirtualPort);
+				printf("uNumPorts=%u\n",uNumPorts);
+				for(n=0;n<uNumPorts&&n<8;n++)
+				{
+					printf("cVirtualPorts[%d]=%s\n",n,cVirtualPorts[n]);
 				}
 			}
-		}
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.ip"))
-		{
-       			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			sprintf(cContainerIp,"%s",str);
-			char *cp;
-			//chop cidr
-			if((cp=strchr(cContainerIp,'/'))!=NULL)
-				*cp=0;
 		}
 	}
 
