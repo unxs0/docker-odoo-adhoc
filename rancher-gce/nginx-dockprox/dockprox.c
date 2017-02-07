@@ -7,6 +7,12 @@
  *	(C) Gary Wallis for AdHoc Ing. S.A. 2016-2017
  *LICENSE
  *	MIT License
+ *NOTES
+ *	Uses Rancher VIRTUAL_HOST env
+ *	as marker for containers that will be using nginx	
+ *	If this env var is  to special value {io.rancher.stack.name} it will
+ *	use the Rancher stack name plus the gcdns-genbot container env cGCDNSZone
+ *	for the DNS hostname if they all exist.
 */
 #include <stdio.h>
 #include <sys/socket.h>
@@ -241,8 +247,48 @@ int main(void)
 
 
 	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
+	char gcGCDNSZone[256]={""};
 
 	jsmntok_t *tokens = json_tokenise(cJson);
+
+	//First pass to get global base stack items.
+	for(size_t i = 0, j = 1; j > 0; i++, j--)
+	{
+		jsmntok_t *t = &tokens[i];
+
+		// Should never reach uninitialized tokens
+		log_assert(t->start != -1 && t->end != -1);
+
+		//Adjust j for size
+		if (t->type == JSMN_ARRAY || t->type == JSMN_OBJECT)
+		j += t->size;
+
+		//print token strings
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
+		{
+			char cGCDNSZone[256]={""};
+			char cServiceName[256]={""};
+			char cData[4096]={""};
+
+			jsmntok_t *t2 = &tokens[i+1];
+
+			char *cID= json_token_tostr(cJson, t2);
+
+			GetDataByContainerId(cID,"Labels",cData);
+			ParseFromJsonList(cData,"io.rancher.stack_service.name",cServiceName);
+
+			//gcGCDNSZone
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"cGCDNSZone",cGCDNSZone);
+			if(cGCDNSZone[0] && strstr(cServiceName,"gcdns-genbot"))
+			{
+				//printf("\tcGCDNSZone=%s\n",cGCDNSZone);
+				//printf("\tcServiceName=%s\n",cServiceName);
+				sprintf(gcGCDNSZone,"%.255s",cGCDNSZone);
+			}
+		}
+	}
+
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -291,7 +337,15 @@ int main(void)
 
 			if(cVirtualHost[0])
 			{
-				fprintf(fp,"#cID=%s\n\n",cID);
+
+				fprintf(fp,"#cID=%s\n",cID);
+				if(cStackName[0] && gcGCDNSZone[0] && !strcmp(cVirtualHost,"{io.rancher.stack.name}"))
+				{
+					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
+					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					fprintf(fp,"#Using stack.name\n");
+					printf("Using stack.name\n");
+				}
 				register int n;
 				for(n=0;n<uNumPorts&&n<8;n++)
 				{
