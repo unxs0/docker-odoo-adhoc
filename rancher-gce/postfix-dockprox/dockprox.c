@@ -1,12 +1,18 @@
 /*
  *FILE
  *PURPOSE
- *	Very initial and simplistic hardcoded AdHoc Odoo docker data parser
+ *	Very simplistic hardcoded AdHoc Odoo docker data parser
  *	for creating postfix conf files
  *AUTHOR/LEGAL
  *	(C) Gary Wallis for AdHoc Ing. S.A. 2016-2017
  *LICENSE
  *	MIT License
+ *NOTES
+ *	Uses Rancher VIRTUAL_HOST env
+ *	as marker for containers that will be using nginx	
+ *	If this env var is  to special value {io.rancher.stack.name} it will
+ *	use the Rancher stack name plus the gcdns-genbot container env cGCDNSZone
+ *	for the DNS hostname if they all exist.
 */
 #include <stdio.h>
 #include <sys/socket.h>
@@ -51,7 +57,6 @@ void EscapePeriods(char* cDest,const char* cSrc)
 
 
 void MainCfTemplate(FILE *fpOut,
-	char const *cContainerName,
 	char const *cMyHostname,
 	char const *cMyDestination,
 	char const *cRelayHostLine)
@@ -135,34 +140,30 @@ void VirtualAliasesTemplate(FILE *fpOut,
 }//void VirtualAliasesTemplate(FILE *fpOut,...)
 
 
-//Case sensitive
-bool boolParseFromJsonArray(char const *cEnv, char const *cName)
+//Case sensitive name/value list
+// "io.rancher.service.launch.config":"io.rancher.service.primary.launch.config",...
+void ParseFromJsonList(char const *cList, char const *cName, char *cValue)
 {
-	//printf("%s\n",cEnv);
-	char cValue[8]={""};
+	cValue[0]=0;
 	char cNamePattern[100]={""};
-	sprintf(cNamePattern,"%.64s=",cName);
+	sprintf(cNamePattern,"%.64s\":\"",cName);
 	unsigned uNamePatternStrLen=strlen(cNamePattern);
-	char *cp=strstr(cEnv,cNamePattern);
+	char *cp=strstr(cList,cNamePattern);
 	if(cp!=NULL)
 	{
-		//printf("cNamePattern=%s\n",cNamePattern);
 		char *cp2=strchr(cp+uNamePatternStrLen,'\"');
 		if(cp!=NULL)
 		{
 			*cp2=0;
-			sprintf(cValue,"%.7s",cp+uNamePatternStrLen);
+			sprintf(cValue,"%.255s",cp+uNamePatternStrLen);
 			*cp2='\"';
-			//printf("%s\n",cValue);
-			if(cValue[0]=='t' || cValue[0]=='T')
-				return(true);
 		}
 	}
-	return(false);
-}//bool boolParseFromJsonArray(char const *cEnv, char const *cName)
+}//void ParseFromJsonList(char const *cEnv, char const *cName, char *cValue)
 
 
-//Case sensitive
+//Case sensitive ENV type list/array
+// "SOMETHING=THIS","ANOTHER=THAT",...
 void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 {
 	cValue[0]=0;
@@ -176,14 +177,14 @@ void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 		if(cp!=NULL)
 		{
 			*cp2=0;
-			sprintf(cValue,"%.127s",cp+uNamePatternStrLen);
+			sprintf(cValue,"%.255s",cp+uNamePatternStrLen);
 			*cp2='\"';
 		}
 	}
 }//void ParseFromJsonArray(char const *cEnv, char const *cName, char *cValue)
 
 
-void GetLabelsByContainerId(char const *cId, char *cEnv)
+void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 {
 	char cURL[256] = {""};
 	sprintf(cURL,"http://127.0.0.1/containers/%.99s/json",cId);
@@ -203,22 +204,18 @@ void GetLabelsByContainerId(char const *cId, char *cEnv)
 		j += t->size;
 
 		//print token strings
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Env"))
+		if (t->type == JSMN_STRING && json_token_streq(cJson,t,(char *)cName))
 		{
 			jsmntok_t *t2 = &tokens[i+1];
 			str = json_token_tostr(cJson, t2);
-			sprintf(cEnv,"%.255s",str);
+			sprintf(cData,"%.4095s",str);
 		}
 	}
-}//void GetLabelsByContainerId(char *cId)
+}//void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 
 
 int main(void)
 {
-
-	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
-
-	jsmntok_t *tokens = json_tokenise(cJson);
 
 	FILE *fpVirtualAliases;
 	if((fpVirtualAliases=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
@@ -260,12 +257,96 @@ int main(void)
 	}
 	printf("Opened /etc/postfix/sasl_passwd.new for write\n");
 
-	char cEnv[512]={""};
-	char *str;
-	char cId[100]={""};
-	char cContainerName[256]={""};
-	char cContainerIp[256]={""};
-	char cVirtualHost[256]={""};
+	void voidBaseInstall(void)
+	{
+		char cMyDestination[256]={""};
+		char cMyHostname[256]={""};
+		char cRelayHostLine[256]={""};
+		char cRelaySASLUser[256]={""};
+		char cRelaySASLPasswd[256]={""};
+		char cDomainsRegex1[256]={""};
+		char cDomainsRegex2[256]={""};
+
+		sprintf(cMyDestination,"%.255s",getenv("cMyDestination"));
+		sprintf(cMyHostname,"%.255s",getenv("cMyHostname"));
+		sprintf(cRelayHostLine,"%.255s",getenv("cRelayHostLine"));
+		sprintf(cRelaySASLUser,"%.255s",getenv("cRelaySASLUser"));
+		sprintf(cRelaySASLPasswd,"%.255s",getenv("cRelaySASLPasswd"));
+		sprintf(cDomainsRegex1,"%.255s",getenv("cDomainsRegex1"));
+		sprintf(cDomainsRegex2,"%.255s",getenv("cDomainsRegex2"));
+
+		printf("\tcMyHostname=%s\n",cMyHostname);
+		printf("\tcMyDestination=%s\n",cMyDestination);
+		if(!cMyHostname[0])
+		{
+			FILE *pfp;
+			char cResponse[256]={""};
+			if((pfp=popen("/bin/hostname -f","r"))!=NULL)
+			{
+				if(fscanf(pfp,"%255s",cResponse)>0)
+				{
+					sprintf(cMyHostname,"%.99s",cResponse);
+					printf("\thostname -f cMyHostname=%s\n",cMyHostname);
+				}
+			}
+		}
+		if(!cMyDestination[0])
+			sprintf(cMyDestination,"%s,localhost",cMyHostname);
+		MainCfTemplate(fpMainCF,cMyHostname,cMyDestination,cRelayHostLine);
+	
+		printf("\tcRelayHostLine=%s\n",cRelayHostLine);
+		printf("\tcRelaySASLUser=%s\n",cRelaySASLUser);
+		printf("\tcRelaySASLPasswd=%s\n",cRelaySASLPasswd);
+		if(cRelayHostLine[0] && cRelaySASLUser[0] && cRelaySASLPasswd[0])
+		{
+			printf("\tUsing relayhost\n");
+			//create SASL password file /etc/postfix/sasl_passwd entry
+			fprintf(fpSASLPasswd,"%.99s %.99s:%.99s\n",cRelayHostLine,cRelaySASLUser,cRelaySASLPasswd);
+			//hash it later in bash script below
+		}
+		else
+		{
+			printf("\tNot using relayhost. Missing at least 1 of 3 requirements.\n");
+		}
+	
+		if(cDomainsRegex1[0])
+		{
+			// virtual_domains_regex
+			// /[@.]adhoc\.com\.ar$/
+			// /(.*)adhoc\.com\.ar$/
+	
+			char cDomainsRegexEscaped[512]={""};
+			EscapePeriods(cDomainsRegexEscaped,cDomainsRegex1);
+			fprintf(fpVirtualDomainRegex,"#\n"
+					"/[@.]%s$/\n"
+					"/(.*)%s$/\n",
+						cDomainsRegexEscaped,
+						cDomainsRegexEscaped);
+		}
+		if(cDomainsRegex2[0])
+		{
+			// virtual_domains_regex
+			// /[@.]adhoc\.com\.ar$/
+			// /(.*)adhoc\.com\.ar$/
+	
+			char cDomainsRegexEscaped[512]={""};
+			EscapePeriods(cDomainsRegexEscaped,cDomainsRegex2);
+			fprintf(fpVirtualDomainRegex,"#\n"
+					"/[@.]%s$/\n"
+					"/(.*)%s$/\n",
+						cDomainsRegexEscaped,
+						cDomainsRegexEscaped);
+		}
+	}//void voidBaseInstall(void)
+
+	voidBaseInstall();
+
+	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
+	char gcGCDNSZone[256]={""};
+
+	jsmntok_t *tokens = json_tokenise(cJson);
+
+	//First pass to get global base stack items.
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -280,136 +361,87 @@ int main(void)
 		//print token strings
 		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
 		{
-			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			sprintf(cId,"%.99s",str);
-			cContainerName[0]=0;
-			GetLabelsByContainerId(cId,cEnv);
-		}
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.ip"))
-		{
-       			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			sprintf(cContainerIp,"%s",str);
-			char *cp;
-			//chop cidr
-			if((cp=strchr(cContainerIp,'/'))!=NULL)
-				*cp=0;
-		}
-		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "io.rancher.container.name"))
-		{
-			jsmntok_t *t2 = &tokens[i+1];
-			str = json_token_tostr(cJson, t2);
-			if(strstr(str,"odoo") && !strstr(str,"-db"))
-			{
-				sprintf(cContainerName,"%.128s",str);
-				//printf("cEnv=%s\n",cEnv);
-				ParseFromJsonArray(cEnv,"VIRTUAL_HOST",cVirtualHost);
-				if(cVirtualHost[0])
-				{
-					fprintf(fpVirtualAliases,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-					VirtualAliasesTemplate(fpVirtualAliases,cVirtualHost,cContainerName);
-					printf("cId=%s\n",cId);
-					printf("\tio.rancher.container.name=%s\n",cContainerName);
-					printf("\tcVirtualHost=%s\n",cVirtualHost);
+			char cGCDNSZone[256]={""};
+			char cServiceName[256]={""};
+			char cData[4096]={""};
 
-					// /etc/aliases.new
-					char cStdDbName[256]={"default"};
-					fprintf(fpEtcAliases,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-					fprintf(fpEtcAliases,
-						"%.64s: \"| /opt/odoo/openerp_mailgate.py  --host=%.64s --port=8069 -d %.64s\"\n",
-							cVirtualHost,cContainerIp,cStdDbName);
-				}
+			jsmntok_t *t2 = &tokens[i+1];
+
+			char *cID= json_token_tostr(cJson, t2);
+
+			GetDataByContainerId(cID,"Labels",cData);
+			ParseFromJsonList(cData,"io.rancher.stack_service.name",cServiceName);
+
+			//gcGCDNSZone
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"cGCDNSZone",cGCDNSZone);
+			if(cGCDNSZone[0] && strstr(cServiceName,"gcdns-genbot"))
+			{
+				//printf("\tcGCDNSZone=%s\n",cGCDNSZone);
+				//printf("\tcServiceName=%s\n",cServiceName);
+				sprintf(gcGCDNSZone,"%.255s",cGCDNSZone);
 			}
-			//This really needs to be run only once on base install
-			else if(strstr(str,"postfix-dockprox"))
+		}
+	}
+
+	for(size_t i = 0, j = 1; j > 0; i++, j--)
+	{
+		jsmntok_t *t = &tokens[i];
+
+		// Should never reach uninitialized tokens
+		log_assert(t->start != -1 && t->end != -1);
+
+		//Adjust j for size
+		if (t->type == JSMN_ARRAY || t->type == JSMN_OBJECT)
+		j += t->size;
+
+		//print token strings
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
+		{
+			char cContainerName[256]={""};
+			char cStackName[256]={""};
+			char cContainerIp[256]={""};
+			char cVirtualHost[256]={""};
+
+			jsmntok_t *t2 = &tokens[i+1];
+			char *cID= json_token_tostr(cJson, t2);
+			//printf("%.255s\n",cID);
+			char cData[4096]={""};
+			GetDataByContainerId(cID,"Labels",cData);
+			//printf("%.4095s\n",cData);
+			ParseFromJsonList(cData,"io.rancher.container.name",cContainerName);
+			ParseFromJsonList(cData,"io.rancher.stack.name",cStackName);
+			//printf("\tcContainerName=%s\n",cContainerName);
+			//printf("\tcStackName=%s\n",cStackName);
+			ParseFromJsonList(cData,"io.rancher.container.ip",cContainerIp);
+			char *cp;
+			if((cp=strchr(cContainerIp,'/'))) *cp=0;
+			//printf("\tcContainerIp=%s\n",cContainerIp);
+
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
+			//printf("\tcVirtualHost=%s\n",cVirtualHost);
+
+			if(cVirtualHost[0])
 			{
-				char cMyDestination[256]={""};
-				char cMyHostname[256]={""};
-				char cRelayHostLine[256]={""};
-				char cRelaySASLUser[256]={""};
-				char cRelaySASLPasswd[256]={""};
-				char cDomainsRegex1[256]={""};
-				char cDomainsRegex2[256]={""};
-				ParseFromJsonArray(cEnv,"cMyDestination",cMyDestination);
-				ParseFromJsonArray(cEnv,"cMyHostname",cMyHostname);
-				ParseFromJsonArray(cEnv,"cRelayHostLine",cRelayHostLine);
-				ParseFromJsonArray(cEnv,"cRelaySASLUser",cRelaySASLUser);
-				ParseFromJsonArray(cEnv,"cRelaySASLPasswd",cRelaySASLPasswd);
-				ParseFromJsonArray(cEnv,"cDomainsRegex1",cDomainsRegex1);
-				ParseFromJsonArray(cEnv,"cDomainsRegex2",cDomainsRegex2);
-				sprintf(cContainerName,"%.128s",str);
-				printf("cId=%s\n",cId);
+				if(cStackName[0] && gcGCDNSZone[0] && !strcmp(cVirtualHost,"{io.rancher.stack.name}"))
+				{
+					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
+					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					printf("Using stack.name\n");
+				}
+				fprintf(fpVirtualAliases,"#cID=%s cContainerName=%s\n",cID,cContainerName);
+				VirtualAliasesTemplate(fpVirtualAliases,cVirtualHost,cContainerName);
+				printf("cID=%s\n",cID);
 				printf("\tio.rancher.container.name=%s\n",cContainerName);
-				printf("\tcMyHostname=%s\n",cMyHostname);
-				printf("\tcMyDestination=%s\n",cMyDestination);
-				//printf("\tcEnv=%s\n",cEnv);
-				if(!cMyHostname[0])
-				{
-					FILE *pfp;
-					char cResponse[256]={""};
-					if((pfp=popen("/bin/hostname -f","r"))!=NULL)
-					{
-						if(fscanf(pfp,"%255s",cResponse)>0)
-						{
-							sprintf(cMyHostname,"%.99s",cResponse);
-							printf("\thostname -f cMyHostname=%s\n",cMyHostname);
-						}
-					}
-				}
-				if(!cMyDestination[0])
-					sprintf(cMyDestination,"%s,localhost",cMyHostname);
-				MainCfTemplate(fpMainCF,cContainerName,cMyHostname,cMyDestination,cRelayHostLine);
+				printf("\tcVirtualHost=%s\n",cVirtualHost);
 
-				printf("\tcRelayHostLine=%s\n",cRelayHostLine);
-				printf("\tcRelaySASLUser=%s\n",cRelaySASLUser);
-				printf("\tcRelaySASLPasswd=%s\n",cRelaySASLPasswd);
-				if(cRelayHostLine[0] && cRelaySASLUser[0] && cRelaySASLPasswd[0])
-				{
-					printf("\tUsing relayhost\n");
-					fprintf(fpSASLPasswd,"#cId=%s cContainerName=%s\n",cId,cContainerName);
-					//create SASL password file /etc/postfix/sasl_passwd entry
-					fprintf(fpSASLPasswd,"%.99s %.99s:%.99s\n",cRelayHostLine,cRelaySASLUser,cRelaySASLPasswd);
-					//hash it later in bash script below
-				}
-				else
-				{
-					printf("\tNot using relayhost. Missing at least 1 of 3 requirements.\n");
-				}
-
-				if(cDomainsRegex1[0])
-				{
-
-					// virtual_domains_regex
-					// /[@.]adhoc\.com\.ar$/
-					// /(.*)adhoc\.com\.ar$/
-
-					char cDomainsRegexEscaped[512]={""};
-					EscapePeriods(cDomainsRegexEscaped,cDomainsRegex1);
-					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
-							"/[@.]%s$/\n"
-							"/(.*)%s$/\n",
-								cId,cContainerName,
-								cDomainsRegexEscaped,
-								cDomainsRegexEscaped);
-				}
-				if(cDomainsRegex2[0])
-				{
-
-					// virtual_domains_regex
-					// /[@.]adhoc\.com\.ar$/
-					// /(.*)adhoc\.com\.ar$/
-
-					char cDomainsRegexEscaped[512]={""};
-					EscapePeriods(cDomainsRegexEscaped,cDomainsRegex2);
-					fprintf(fpVirtualDomainRegex,"#cId=%s cContainerName=%s\n"
-							"/[@.]%s$/\n"
-							"/(.*)%s$/\n",
-								cId,cContainerName,
-								cDomainsRegexEscaped,
-								cDomainsRegexEscaped);
-				}
-
+				// /etc/aliases.new
+				char cStdDbName[256]={"default"};
+				fprintf(fpEtcAliases,"#cID=%s cContainerName=%s\n",cID,cContainerName);
+				fprintf(fpEtcAliases,
+					"%.64s: \"| /opt/odoo/openerp_mailgate.py  --host=%.64s --port=8069 -d %.64s\"\n",
+						cVirtualHost,cContainerIp,cStdDbName);
 			}
 		}
 	}
