@@ -22,15 +22,18 @@ COPY ./nginx/server.conf.tpl /var/local/dockprox/server.conf.tpl
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx/index.html /usr/share/nginx/html/index.html
+COPY ./nginx/ssl-cert-snakeoil.pem /etc/ssl/certs/ssl-cert-snakeoil.pem
+COPY ./nginx/ssl-cert-snakeoil.key /etc/ssl/private/ssl-cert-snakeoil.key
 #cron
 COPY ./cron/dockprox.cron /var/local/dockprox/dockprox.cron
-COPY ./cron/certbot.cron /var/local/dockprox/certbot.cron
-#RUN /usr/bin/crontab /var/local/dockprox/dockprox.cron
-RUN /usr/bin/crontab /var/local/dockprox/certbot.cron
+RUN /usr/bin/crontab /var/local/dockprox/dockprox.cron
 
 COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord","-n"]
 
 #docker build -t unxsio/nginxssl-dockprox .
+#testing ports
+#docker run --restart unless-stopped --name nginxssl-dockprox -p 10080:80 -p 10443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
+#production ports
 #docker run --restart unless-stopped --name nginxssl-dockprox -p 80:80 -p 443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
 #docker push unxsio/nginxssl-dockprox

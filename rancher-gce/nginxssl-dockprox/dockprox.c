@@ -2,7 +2,7 @@
  *FILE
  *PURPOSE
  *	Very simplistic hardcoded AdHoc Odoo docker data parser
- *	for creating Nginx conf.d file
+ *	for creating Nginx conf.d fileS
  *AUTHOR/LEGAL
  *	(C) Gary Wallis for AdHoc Ing. S.A. 2016-2017
  *LICENSE
@@ -13,6 +13,8 @@
  *	If this env var is  to special value {io.rancher.stack.name} it will
  *	use the Rancher stack name plus the gcdns-genbot container env cGCDNSZone
  *	for the DNS hostname if they all exist.
+ *	We need to create a conf.d file for each Odoo container in order
+ *	to use certbot easier.
 */
 #include <stdio.h>
 #include <sys/socket.h>
@@ -228,17 +230,121 @@ void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 	}
 }//void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 
-
-int main(void)
+void voidCertbotDomains(void);
+void voidCertbotDomains(void)
 {
+	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
+	char gcGCDNSZone[256]={""};
+
+	jsmntok_t *tokens = json_tokenise(cJson);
+
+	//First pass to get global base stack items.
+	for(size_t i = 0, j = 1; j > 0; i++, j--)
+	{
+		jsmntok_t *t = &tokens[i];
+
+		// Should never reach uninitialized tokens
+		log_assert(t->start != -1 && t->end != -1);
+
+		//Adjust j for size
+		if (t->type == JSMN_ARRAY || t->type == JSMN_OBJECT)
+		j += t->size;
+
+		//print token strings
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
+		{
+			char cGCDNSZone[256]={""};
+			char cServiceName[256]={""};
+			char cData[4096]={""};
+
+			jsmntok_t *t2 = &tokens[i+1];
+
+			char *cID= json_token_tostr(cJson, t2);
+
+			GetDataByContainerId(cID,"Labels",cData);
+			ParseFromJsonList(cData,"io.rancher.stack_service.name",cServiceName);
+
+			//gcGCDNSZone
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"cGCDNSZone",cGCDNSZone);
+			if(cGCDNSZone[0] && strstr(cServiceName,"gcdns-genbot"))
+			{
+				//printf("\tcGCDNSZone=%s\n",cGCDNSZone);
+				//printf("\tcServiceName=%s\n",cServiceName);
+				sprintf(gcGCDNSZone,"%.255s",cGCDNSZone);
+			}
+		}
+	}
+
+	for(size_t i = 0, j = 1; j > 0; i++, j--)
+	{
+		jsmntok_t *t = &tokens[i];
+
+		// Should never reach uninitialized tokens
+		log_assert(t->start != -1 && t->end != -1);
+
+		//Adjust j for size
+		if (t->type == JSMN_ARRAY || t->type == JSMN_OBJECT)
+		j += t->size;
+
+		//print token strings
+		if (t->type == JSMN_STRING && json_token_streq(cJson, t, "Id"))
+		{
+			char cContainerName[256]={""};
+			char cStackName[256]={""};
+			char cVirtualHost[256]={""};
+
+			jsmntok_t *t2 = &tokens[i+1];
+			char *cID= json_token_tostr(cJson, t2);
+			//printf("%.255s\n",cID);
+			char cData[4096]={""};
+			GetDataByContainerId(cID,"Labels",cData);
+			//printf("%.4095s\n",cData);
+			ParseFromJsonList(cData,"io.rancher.container.name",cContainerName);
+			ParseFromJsonList(cData,"io.rancher.stack.name",cStackName);
+			//printf("\tcContainerName=%s\n",cContainerName);
+			//printf("\tcStackName=%s\n",cStackName);
+
+			GetDataByContainerId(cID,"Env",cData);
+			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
+			//printf("\tcVirtualHost=%s\n",cVirtualHost);
+
+			if(cVirtualHost[0])
+			{
+				if(cStackName[0] && gcGCDNSZone[0] && strstr(cVirtualHost,"{io.rancher.stack.name}"))
+				{
+					char *cp;
+					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
+					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					//printf("Using stack.name\n");
+				}
+				printf("-d %s ",cVirtualHost);
+			}
+		}
+	}
+
+}//void voidCertbotDomains(void);
+
+
+int main(int iArgc, char *cArgv[])
+{
+
+	if(iArgc==2 && !strcmp(cArgv[1],"--certbot-domains"))
+	{
+		voidCertbotDomains();
+		exit(0);
+	}
+
 	if(system("if [  -f /etc/nginx/conf.d/docker.conf ];then cp /etc/nginx/conf.d/docker.conf /etc/nginx/conf.d/docker.conf.0;fi"))
 	{
 		fprintf(stderr,"Could not copy /etc/nginx/conf.d/docker.conf\n");
 		exit(2);
 	}
 
-	FILE *fp;
-	if((fp=fopen("/etc/nginx/conf.d/docker.conf","w"))==NULL)
+	//This file will be used for upstreams. So we do not have to change the
+	//reload nginx logic at this time.
+	FILE *fpDockerConf;
+	if((fpDockerConf=fopen("/etc/nginx/conf.d/docker.conf","w"))==NULL)
 	{
 		fprintf(stderr,"Could not open /etc/nginx/conf.d/docker.conf\n");
 		exit(2);
@@ -338,23 +444,33 @@ int main(void)
 			if(cVirtualHost[0])
 			{
 
-				fprintf(fp,"#cID=%s\n",cID);
-				if(cStackName[0] && gcGCDNSZone[0] && !strcmp(cVirtualHost,"{io.rancher.stack.name}"))
+				fprintf(fpDockerConf,"#cID=%s\n",cID);
+				if(cStackName[0] && gcGCDNSZone[0] && strstr(cVirtualHost,"{io.rancher.stack.name}"))
 				{
 					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
 					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
-					fprintf(fp,"#Using stack.name\n");
+					fprintf(fpDockerConf,"#Using stack.name\n");
 					printf("Using stack.name\n");
 				}
 				register int n;
 				for(n=0;n<uNumPorts&&n<8;n++)
 				{
 					if(n==0)
-						UpstreamConfTemplate(fp,cContainerName,cContainerIp,cVirtualPorts[n]);
+						UpstreamConfTemplate(fpDockerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
 					else
-						UpstreamConfTemplate(fp,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
+						UpstreamConfTemplate(fpDockerConf,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
 				}
-				ServerConfTemplate(fp,cVirtualHost,cContainerName,cContainerNameChat);
+				FILE *fpServerConf;
+				char cFile[256]={""};
+				sprintf(cFile,"/etc/nginx/conf.d/%s.conf",cVirtualHost);
+				if((fpServerConf=fopen(cFile,"w"))==NULL)
+				{
+					fprintf(stderr,"Could not open %s\n",cFile);
+					exit(2);
+				}
+				printf("Opened %s for write\n",cFile);
+				ServerConfTemplate(fpServerConf,cVirtualHost,cContainerName,cContainerNameChat);
+				fclose(fpServerConf);
 				printf("cID=%s\n",cID);
 				printf("cVirtualHost=%s\n",cVirtualHost);
 				printf("cVirtualPort=%s\n",cVirtualPort);
@@ -367,7 +483,7 @@ int main(void)
 		}
 	}
 
-	fclose(fp);
+	fclose(fpDockerConf);
 	if(system("diff /etc/nginx/conf.d/docker.conf /etc/nginx/conf.d/docker.conf.0 > /dev/null 2>&1"))
 	{
 		if(!system("kill -HUP `pidof nginx | cut -f 2 -d ' '`"))

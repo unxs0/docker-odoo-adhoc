@@ -1,2 +1,2 @@
-#create /etc/nginx/conf.d/docker every 2 minutes
-*/2 * * * * /usr/sbin/dockprox > /tmp/dockprox.cron.log 2>&1;
+#create /etc/nginx/conf.d/docker every 2 minutes and then check certs
+*/2 * * * * /usr/sbin/dockprox > /tmp/dockprox.cron.log 2>&1; /var/local/certbot/certbot.sh;
