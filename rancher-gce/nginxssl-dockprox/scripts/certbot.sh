@@ -7,17 +7,22 @@
 #ssl_certificate /etc/letsencrypt/live/{{cPublicServerName}}/fullchain.pem; # managed by Certbot
 #ssl_certificate_key /etc/letsencrypt/live/{{cPublicServerName}}/privkey.pem; # managed by Certbot
 
+PATH="/root/.local/share/letsencrypt/bin/:/home/unxs/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:";
+
+cat /dev/null > /tmp/certbot.log;
 
 for cDomain in `/usr/sbin/dockprox --certbot-domains`;do
 
+	echo "$cDomain" >> /tmp/certbot.log;
+
 	if [ ! -f "/etc/letsencrypt/live/$cDomain/fullchain.pem" ];then
-		#configure domain for snakeoil
-		/usr/sbin/dockprox --snakeoil-update $cDomain;
+		echo "No certbot cert: configure domain for snakeoil" >> /tmp/certbot.log;
+		/usr/sbin/dockprox --snakeoil-update $cDomain >> /tmp/certbot.log 2>&1;
 	fi
-	/root/certbot-auto certonly --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain > /tmp/certbot.log 2>&1;
+	/root/certbot-auto certonly --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
 	if [ "$?" == "0" ];then
-		#configure domain for certbot but only if the conf.d/ file is different
-		#do we reload nginx
-		/usr/sbin/dockprox --certbot-update $cDomain;
+		echo "certbot-auto ok: configure domain for certbot" >> /tmp/certbot.log;
+		/usr/sbin/dockprox --certbot-update $cDomain >> /tmp/certbot.log 2>&1;
 	fi
+	echo "" >> /tmp/certbot.log;
 done

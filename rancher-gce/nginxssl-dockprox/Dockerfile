@@ -33,9 +33,9 @@ RUN /usr/bin/crontab /var/local/dockprox/dockprox.cron
 COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord","-n"]
 
-#docker build -t unxsio/nginxssl-dockprox .
+# docker build -t unxsio/nginxssl-dockprox .
 #testing ports
-#docker run --restart unless-stopped --name nginxssl-dockprox -p 10080:80 -p 10443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
+# docker run --restart unless-stopped --name nginxssl-dockprox -p 10080:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
 #production ports
-#docker run --restart unless-stopped --name nginxssl-dockprox -p 80:80 -p 443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
+# docker run --restart unless-stopped --name nginxssl-dockprox -p 80:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
 #docker push unxsio/nginxssl-dockprox
