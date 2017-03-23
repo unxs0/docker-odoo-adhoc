@@ -33,20 +33,23 @@ be able to figure out how to parse any Docker or Rancher label name/value data.
 
 Same with the template sections and the conf .tpl files.
 
-nginx/ dir contains /etc/nginx/conf.d/docker.conf configuration section
-templates server and upstream.
+nginx/ dir contains /etc/nginx/conf.d/ configuration section
+templates for server and upstream.
 
 nginx/nginx.conf and nginx/default.conf can be easily modified 
 and then the Docker image rebuit.
 
+The scripts/certbot.sh is also simple to modify.
+
 ### Using
 
-Edit dockprox.c and .tpl files, then::
+Edit dockprox.c and nginx/.tpl files, then::
 
 ```
     make
-    docker build -t nginx-dockprox .
-    docker run --restart unless-stopped --name nginx-dockprox -p 80:80 -p 443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d nginx-dockprox
+    docker build -t unxsio/nginxssl-dockprox .
+    docker run --restart unless-stopped --name nginxssl-dockprox -p 80:80 -p 443:443 -v /etc/letsencrypt:/etc/letsencrypt -v /var/run/docker.sock:/var/run/docker.sock:ro -d unxsio/nginxssl-dockprox
+
 ```
 
 ### Help
