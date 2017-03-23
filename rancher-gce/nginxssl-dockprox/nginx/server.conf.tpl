@@ -2,6 +2,10 @@ server {
     listen 80;
     server_name {{cPublicServerName}};
 
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
     # proxy header and settings
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -57,7 +61,7 @@ server {
     # SSL parameters
     ssl on;
 
-    #these are changed by certbot
+    #these are changed to those used by certbot
     ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
     ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
 

@@ -32,6 +32,7 @@
 #include "template.h"
 #define MAXBUFLEN 102400 //tpl file size max
 
+static char *gcServerTemplate="/var/local/dockprox/server.conf.tpl";
 
 void AppFunctions(FILE *fp,char *cFunction)
 {
@@ -102,7 +103,7 @@ void ServerConfTemplate(FILE *fpOut,
 
 
 	char cTemplate[MAXBUFLEN + 1];
-	FILE *fp = fopen("/var/local/dockprox/server.conf.tpl", "r");
+	FILE *fp = fopen(gcServerTemplate, "r");
 	if(fp!=NULL)
 	{
 		size_t newLen=fread(cTemplate,sizeof(char),MAXBUFLEN,fp);
@@ -119,7 +120,7 @@ void ServerConfTemplate(FILE *fpOut,
 	}
 	else
 	{
-		fputs("Error opening file /var/local/dockprox/server.conf.tpl\n", stderr);
+		fprintf(stderr,"Error opening server template file %s\n",gcServerTemplate);
 	}
 	Template(cTemplate,&template,fpOut);
 
@@ -311,14 +312,29 @@ void voidCertbotDomains(void)
 
 			if(cVirtualHost[0])
 			{
-				if(cStackName[0] && gcGCDNSZone[0] && strstr(cVirtualHost,"{io.rancher.stack.name}"))
+				char *cp;
+				if(cStackName[0] && gcGCDNSZone[0] && (cp=strstr(cVirtualHost,"{io.rancher.stack.name}")))
 				{
-					char *cp;
-					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
-					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
-					//printf("Using stack.name\n");
+					char *cp2;
+					//fix - this is not a complete solution, tmp hack for testing
+					if((cp2=strchr(gcGCDNSZone,'-'))) *cp2='.';
+
+					//cVirtualHost may be something like backup.{io.rancher.stack.name} handle
+					if(cVirtualHost[0]=='{')
+					{
+						//does not have another stop
+						sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					}
+					else
+					{
+						//has a first part with trailing stop we hope
+						*cp=0;
+						char cTmp[256]={""};
+						sprintf(cTmp,"%.64s%.64s.%.127s",cVirtualHost,cStackName,gcGCDNSZone);
+						sprintf(cVirtualHost,"%.255s",cTmp);
+					}
 				}
-				printf("-d %s ",cVirtualHost);
+				printf("%s ",cVirtualHost);
 			}
 		}
 	}
@@ -329,27 +345,25 @@ void voidCertbotDomains(void)
 int main(int iArgc, char *cArgv[])
 {
 
+	char cDomain[100]={""};
+
 	if(iArgc==2 && !strcmp(cArgv[1],"--certbot-domains"))
 	{
 		voidCertbotDomains();
 		exit(0);
 	}
 
-	if(system("if [  -f /etc/nginx/conf.d/docker.conf ];then cp /etc/nginx/conf.d/docker.conf /etc/nginx/conf.d/docker.conf.0;fi"))
+	if(iArgc==3 && !strcmp(cArgv[1],"--certbot-update"))
 	{
-		fprintf(stderr,"Could not copy /etc/nginx/conf.d/docker.conf\n");
-		exit(2);
+		sprintf(cDomain,"%.99s",cArgv[2]);
+		gcServerTemplate="/var/local/dockprox/server.certbot.conf.tpl";
 	}
 
-	//This file will be used for upstreams. So we do not have to change the
-	//reload nginx logic at this time.
-	FILE *fpDockerConf;
-	if((fpDockerConf=fopen("/etc/nginx/conf.d/docker.conf","w"))==NULL)
+	if(iArgc==3 && !strcmp(cArgv[1],"--snakeoil-update"))
 	{
-		fprintf(stderr,"Could not open /etc/nginx/conf.d/docker.conf\n");
-		exit(2);
+		sprintf(cDomain,"%.99s",cArgv[2]);
+		gcServerTemplate="/var/local/dockprox/server.snakeoil.conf.tpl";
 	}
-	printf("Opened /etc/nginx/conf.d/docker.conf for write\n");
 
 
 	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
@@ -395,6 +409,7 @@ int main(int iArgc, char *cArgv[])
 		}
 	}
 
+	unsigned uReloadNginx=0;
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -444,22 +459,45 @@ int main(int iArgc, char *cArgv[])
 			if(cVirtualHost[0])
 			{
 
-				fprintf(fpDockerConf,"#cID=%s\n",cID);
-				if(cStackName[0] && gcGCDNSZone[0] && strstr(cVirtualHost,"{io.rancher.stack.name}"))
+				if(cStackName[0] && gcGCDNSZone[0] && (cp=strstr(cVirtualHost,"{io.rancher.stack.name}")))
 				{
-					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
-					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
-					fprintf(fpDockerConf,"#Using stack.name\n");
-					printf("Using stack.name\n");
-				}
-				register int n;
-				for(n=0;n<uNumPorts&&n<8;n++)
-				{
-					if(n==0)
-						UpstreamConfTemplate(fpDockerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
+					char *cp2;
+					//fix - this is not a complete solution, tmp hack for testing
+					if((cp2=strchr(gcGCDNSZone,'-'))) *cp2='.';
+
+					//cVirtualHost may be something like backup.{io.rancher.stack.name} handle
+					if(cVirtualHost[0]=='{')
+					{
+						//does not have another stop
+						sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					}
 					else
-						UpstreamConfTemplate(fpDockerConf,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
+					{
+						//has a first part with trailing stop we hope
+						*cp=0;
+						char cTmp[256]={""};
+						sprintf(cTmp,"%.64s%.64s.%.127s",cVirtualHost,cStackName,gcGCDNSZone);
+						sprintf(cVirtualHost,"%.255s",cTmp);
+					}
 				}
+
+				if(cDomain[0] && strcmp(cDomain,cVirtualHost))
+				{
+					printf("skipping %s...\n",cVirtualHost);
+					continue;
+				}
+
+				char cSystem[1028];
+				sprintf(cSystem, "if [  -f /etc/nginx/conf.d/%1$s.conf ];then"
+						"    cp /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0;"
+						"fi",
+						cVirtualHost);
+				if(system(cSystem))
+				{
+					fprintf(stderr,"Could not copy /etc/nginx/conf.d/%s.conf\n",cVirtualHost);
+					exit(2);
+				}
+
 				FILE *fpServerConf;
 				char cFile[256]={""};
 				sprintf(cFile,"/etc/nginx/conf.d/%s.conf",cVirtualHost);
@@ -469,8 +507,26 @@ int main(int iArgc, char *cArgv[])
 					exit(2);
 				}
 				printf("Opened %s for write\n",cFile);
+				fprintf(fpServerConf,"#cID=%s\n",cID);
+				register int n;
+				for(n=0;n<uNumPorts&&n<8;n++)
+				{
+					if(n==0)
+						UpstreamConfTemplate(fpServerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
+					else
+						UpstreamConfTemplate(fpServerConf,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
+				}
 				ServerConfTemplate(fpServerConf,cVirtualHost,cContainerName,cContainerNameChat);
 				fclose(fpServerConf);
+
+				sprintf(cSystem, "diff /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0 > /dev/null 2>&1",
+							cVirtualHost);
+				if(system(cSystem))
+				{
+					uReloadNginx=1;
+					printf("/etc/nginx/conf.d/%1$s.conf has changed\n",cVirtualHost);
+				
+				}
 				printf("cID=%s\n",cID);
 				printf("cVirtualHost=%s\n",cVirtualHost);
 				printf("cVirtualPort=%s\n",cVirtualPort);
@@ -483,8 +539,7 @@ int main(int iArgc, char *cArgv[])
 		}
 	}
 
-	fclose(fpDockerConf);
-	if(system("diff /etc/nginx/conf.d/docker.conf /etc/nginx/conf.d/docker.conf.0 > /dev/null 2>&1"))
+	if(uReloadNginx)
 	{
 		if(!system("kill -HUP `pidof nginx | cut -f 2 -d ' '`"))
 			printf("Reload nginx\n");

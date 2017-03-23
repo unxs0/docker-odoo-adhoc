@@ -19,6 +19,8 @@ RUN mkdir -p /var/local/dockprox
 COPY ./dockprox /usr/sbin/dockprox
 COPY ./nginx/upstream.conf.tpl /var/local/dockprox/upstream.conf.tpl
 COPY ./nginx/server.conf.tpl /var/local/dockprox/server.conf.tpl
+COPY ./nginx/server.snakeoil.conf.tpl /var/local/dockprox/server.snakeoil.conf.tpl
+COPY ./nginx/server.certbot.conf.tpl /var/local/dockprox/server.certbot.conf.tpl
 COPY ./nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./nginx/index.html /usr/share/nginx/html/index.html
