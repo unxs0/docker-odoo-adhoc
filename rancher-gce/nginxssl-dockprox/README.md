@@ -1,4 +1,4 @@
-** Rancher SSL/LetsEncrypt GCE Nginx Docker Proxy 
+## Rancher SSL/LetsEncrypt GCE Nginx Docker Proxy 
 
 Runs via supervisord nginx and cron. 
 
@@ -15,7 +15,7 @@ for Odoo http and Odoo chat/IM traffic.
 
 Configures and maintains certbot/letsencrypt SSL certs
 
-*** dockprox program
+### dockprox program
 
 Very simple unix socket reader and JSON parser are used together with a simple template
 system to create nginx configuration file.
@@ -26,7 +26,7 @@ In the provided case for an Odoo ERP proxy.
 
 Uses io.rancher labels and other docker API data to configure.
 
-*** Easy to modify
+### Easy to modify
 
 With very basic C language skills dockprox.c is easy to change to suit your own needs. You should
 be able to figure out how to parse any Docker or Rancher label name/value data.
@@ -39,7 +39,7 @@ templates server and upstream.
 nginx/nginx.conf and nginx/default.conf can be easily modified 
 and then the Docker image rebuit.
 
-*** Using
+### Using
 
 Edit dockprox.c and .tpl files, then::
 
@@ -49,7 +49,6 @@ Edit dockprox.c and .tpl files, then::
     docker run --restart unless-stopped --name nginx-dockprox -p 80:80 -p 443:443 -v /var/run/docker.sock:/var/run/docker.sock:ro -d nginx-dockprox
 ```
 
-*** Help
-
+### Help
 
 Contact support@unxs.io for free limited support.
