@@ -24,7 +24,7 @@ for cDomain in `/usr/sbin/dockprox --certbot-domains`;do
 	fi
 
 	#maintain or install new cert
-	/root/certbot-auto certonly --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
+	/root/certbot-auto certonly --staging --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
 	if [ "$?" == "0" ];then
 		echo "certbot-auto ok: configure domain for certbot" >> /tmp/certbot.log;
 		/usr/sbin/dockprox --certbot-update $cDomain >> /tmp/certbot.log 2>&1;
