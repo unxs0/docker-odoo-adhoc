@@ -18,7 +18,12 @@ for cDomain in `/usr/sbin/dockprox --certbot-domains`;do
 	if [ ! -f "/etc/letsencrypt/live/$cDomain/fullchain.pem" ];then
 		echo "No certbot cert: configure domain for snakeoil" >> /tmp/certbot.log;
 		/usr/sbin/dockprox --snakeoil-update $cDomain >> /tmp/certbot.log 2>&1;
+	else
+		echo "certbot cert exists: configure domain for snakeoil" >> /tmp/certbot.log;
+		/usr/sbin/dockprox --certbot-update $cDomain >> /tmp/certbot.log 2>&1;
 	fi
+
+	#maintain or install new cert
 	/root/certbot-auto certonly --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
 	if [ "$?" == "0" ];then
 		echo "certbot-auto ok: configure domain for certbot" >> /tmp/certbot.log;
