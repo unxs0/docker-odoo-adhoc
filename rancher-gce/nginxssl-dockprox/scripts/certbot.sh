@@ -19,7 +19,7 @@ for cDomain in `/usr/sbin/dockprox --certbot-domains`;do
 		echo "No certbot cert: configure domain for snakeoil" >> /tmp/certbot.log;
 		/usr/sbin/dockprox --snakeoil-update $cDomain >> /tmp/certbot.log 2>&1;
 	else
-		echo "certbot cert exists: configure domain for snakeoil" >> /tmp/certbot.log;
+		echo "certbot cert exists: configure domain with existing cert" >> /tmp/certbot.log;
 		/usr/sbin/dockprox --certbot-update $cDomain >> /tmp/certbot.log 2>&1;
 	fi
 
