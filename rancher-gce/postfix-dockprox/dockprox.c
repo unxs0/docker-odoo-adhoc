@@ -257,24 +257,16 @@ int main(void)
 	}
 	printf("Opened /etc/postfix/sasl_passwd.new for write\n");
 
+	char cMyDestination[256]={""};
+	char cMyHostname[256]={""};
+	char cRelayHostLine[256]={""};
+	char cRelaySASLUser[256]={""};
+	char cRelaySASLPasswd[256]={""};
+	char cDomainsRegex1[256]={""};
+	char cDomainsRegex2[256]={""};
+
 	void voidBaseInstall(void)
 	{
-		char cMyDestination[256]={""};
-		char cMyHostname[256]={""};
-		char cRelayHostLine[256]={""};
-		char cRelaySASLUser[256]={""};
-		char cRelaySASLPasswd[256]={""};
-		char cDomainsRegex1[256]={""};
-		char cDomainsRegex2[256]={""};
-
-		sprintf(cMyDestination,"%.255s",getenv("cMyDestination"));
-		sprintf(cMyHostname,"%.255s",getenv("cMyHostname"));
-		sprintf(cRelayHostLine,"%.255s",getenv("cRelayHostLine"));
-		sprintf(cRelaySASLUser,"%.255s",getenv("cRelaySASLUser"));
-		sprintf(cRelaySASLPasswd,"%.255s",getenv("cRelaySASLPasswd"));
-		sprintf(cDomainsRegex1,"%.255s",getenv("cDomainsRegex1"));
-		sprintf(cDomainsRegex2,"%.255s",getenv("cDomainsRegex2"));
-
 		printf("\tcMyHostname=%s\n",cMyHostname);
 		printf("\tcMyDestination=%s\n",cMyDestination);
 		if(!cMyHostname[0] || !strcmp(cMyHostname,"(null)"))
@@ -288,6 +280,13 @@ int main(void)
 					sprintf(cMyHostname,"%.99s",cResponse);
 					printf("\thostname -f cMyHostname=%s\n",cMyHostname);
 				}
+				pclose(pfp);
+			}
+			FILE *fp;
+			if((fp=fopen("/etc/mailname","w"))!=NULL)
+			{
+				fprintf(fp,"%s\n",cMyHostname);
+				fclose(fp);
 			}
 		}
 		if(!cMyDestination[0] || !strcmp(cMyDestination,"(null)"))
@@ -343,7 +342,6 @@ int main(void)
 		}
 	}//void voidBaseInstall(void)
 
-	voidBaseInstall();
 
 	char *cJson = json_fetch_unixsock("http://127.0.0.1/containers/json");
 	char gcGCDNSZone[256]={""};
@@ -385,8 +383,21 @@ int main(void)
 				//printf("\tcServiceName=%s\n",cServiceName);
 				sprintf(gcGCDNSZone,"%.255s",cGCDNSZone);
 			}
+
+			GetDataByContainerId(cID,"Env",cData);
+			if(strstr(cServiceName,"postfix-dockprox"))
+			{
+				ParseFromJsonArray(cData,"cMyDestination",cMyDestination);
+				ParseFromJsonArray(cData,"cRelayHostLine",cRelayHostLine);
+				ParseFromJsonArray(cData,"cRelaySASLUser",cRelaySASLUser);
+				ParseFromJsonArray(cData,"cRelaySASLPasswd",cRelaySASLPasswd);
+				ParseFromJsonArray(cData,"cDomainsRegex1",cDomainsRegex1);
+				ParseFromJsonArray(cData,"cDomainsRegex2",cDomainsRegex2);
+			}
 		}
 	}
+
+	voidBaseInstall();
 
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
