@@ -269,7 +269,7 @@ int main(void)
 	{
 		printf("\tcMyHostname=%s\n",cMyHostname);
 		printf("\tcMyDestination=%s\n",cMyDestination);
-		if(!cMyHostname[0] || !strcmp(cMyHostname,"(null)"))
+		if(!cMyHostname[0])
 		{
 			FILE *pfp;
 			char cResponse[256]={""};
@@ -289,18 +289,15 @@ int main(void)
 				fclose(fp);
 			}
 		}
-		if(!cMyDestination[0] || !strcmp(cMyDestination,"(null)"))
+		if(!cMyDestination[0])
 			sprintf(cMyDestination,"%s,localhost",cMyHostname);
-		if(!strcmp(cRelayHostLine,"(null)"))
-			cRelayHostLine[0]=0;
 			
 		MainCfTemplate(fpMainCF,cMyHostname,cMyDestination,cRelayHostLine);
 	
 		printf("\tcRelayHostLine=%s\n",cRelayHostLine);
 		printf("\tcRelaySASLUser=%s\n",cRelaySASLUser);
 		printf("\tcRelaySASLPasswd=%s\n",cRelaySASLPasswd);
-		if(cRelayHostLine[0] && cRelaySASLUser[0] && cRelaySASLPasswd[0] 
-			&& strcmp(cRelayHostLine,"(null)") && strcmp(cRelaySASLUser,"(null)") && strcmp(cRelaySASLPasswd,"(null)"))
+		if(cRelayHostLine[0] && cRelaySASLUser[0] && cRelaySASLPasswd[0])
 		{
 			printf("\tUsing relayhost\n");
 			//create SASL password file /etc/postfix/sasl_passwd entry
@@ -312,7 +309,7 @@ int main(void)
 			printf("\tNot using relayhost. Missing at least 1 of 3 requirements.\n");
 		}
 	
-		if(cDomainsRegex1[0] && strcmp(cDomainsRegex1,"(null)"))
+		if(cDomainsRegex1[0])
 		{
 			// virtual_domains_regex
 			// /[@.]adhoc\.com\.ar$/
@@ -326,7 +323,7 @@ int main(void)
 						cDomainsRegexEscaped,
 						cDomainsRegexEscaped);
 		}
-		if(cDomainsRegex2[0] && strcmp(cDomainsRegex2,"(null)"))
+		if(cDomainsRegex2[0])
 		{
 			// virtual_domains_regex
 			// /[@.]adhoc\.com\.ar$/
@@ -373,6 +370,7 @@ int main(void)
 
 			GetDataByContainerId(cID,"Labels",cData);
 			ParseFromJsonList(cData,"io.rancher.stack_service.name",cServiceName);
+			//printf("\tcServiceName=%s\n",cServiceName);
 
 			//gcGCDNSZone
 			GetDataByContainerId(cID,"Env",cData);
@@ -387,6 +385,7 @@ int main(void)
 			GetDataByContainerId(cID,"Env",cData);
 			if(strstr(cServiceName,"postfix-dockprox"))
 			{
+				ParseFromJsonArray(cData,"cMyHostname",cMyHostname);
 				ParseFromJsonArray(cData,"cMyDestination",cMyDestination);
 				ParseFromJsonArray(cData,"cRelayHostLine",cRelayHostLine);
 				ParseFromJsonArray(cData,"cRelaySASLUser",cRelaySASLUser);
