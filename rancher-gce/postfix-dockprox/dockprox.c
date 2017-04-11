@@ -438,12 +438,29 @@ int main(void)
 
 			if(cVirtualHost[0])
 			{
-				if(cStackName[0] && gcGCDNSZone[0] && !strcmp(cVirtualHost,"{io.rancher.stack.name}"))
+				char *cp;
+				if(cStackName[0] && gcGCDNSZone[0] && (cp=strstr(cVirtualHost,"{io.rancher.stack.name}")))
 				{
-					if((cp=strchr(gcGCDNSZone,'-'))) *cp='.';
-					sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
-					printf("Using stack.name\n");
+					char *cp2;
+					//fix - this is not a complete solution, tmp hack for testing
+					if((cp2=strchr(gcGCDNSZone,'-'))) *cp2='.';
+
+					//cVirtualHost may be something like backup.{io.rancher.stack.name} handle
+					if(cVirtualHost[0]=='{')
+					{
+						//does not have another stop
+						sprintf(cVirtualHost,"%.64s.%.128s",cStackName,gcGCDNSZone);
+					}
+					else
+					{
+						//has a first part with trailing stop we hope
+						*cp=0;
+						char cTmp[256]={""};
+						sprintf(cTmp,"%.64s%.64s.%.127s",cVirtualHost,cStackName,gcGCDNSZone);
+						sprintf(cVirtualHost,"%.255s",cTmp);
+					}
 				}
+
 				fprintf(fpVirtualAliases,"#cID=%s cContainerName=%s\n",cID,cContainerName);
 				VirtualAliasesTemplate(fpVirtualAliases,cVirtualHost,cContainerName);
 				printf("cID=%s\n",cID);

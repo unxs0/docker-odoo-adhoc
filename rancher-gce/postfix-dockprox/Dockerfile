@@ -2,7 +2,7 @@ FROM ubuntu
 MAINTAINER docker@unxs.io
 USER root
 RUN apt-get update && apt-get -y -q --no-install-recommends install \
-	vim-tiny libsasl2-modules rsyslog python postfix iputils-ping telnet net-tools libcurl4-gnutls-dev cron supervisor \
+	vim-tiny libsasl2-modules rsyslog postfix iputils-ping telnet net-tools libcurl4-gnutls-dev cron supervisor \
 	&& apt-get clean \
 	&& rm -r /var/lib/apt/lists/*
 RUN mkdir -p /var/local/dockprox
