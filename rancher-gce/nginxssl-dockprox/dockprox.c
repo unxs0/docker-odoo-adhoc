@@ -158,6 +158,38 @@ unsigned uSplitPorts(char const *cVirtualPort,char cVirtualPorts[8][32])
 }//unsigned uSplitPorts(char const *cVirtualPort,char cVirtualPorts[8][32])
 
 
+unsigned uSplitOtherServerNames(char const *cOtherServerNames,char cOtherServers[8][100]);
+unsigned uSplitOtherServerNames(char const *cOtherServerNames,char cOtherServers[8][100])
+{
+	char str[256]={""};
+	sprintf(str,"%.255s",cOtherServerNames);
+	char ** res = NULL;
+	char *  p  = strtok (str, ";");
+	int n_spaces = 0, i;
+
+	while (p)
+	{
+		res=realloc(res,sizeof (char*) * ++n_spaces);
+		if(res==NULL)
+			exit(-1); /* memory allocation failed */
+		res[n_spaces-1]=p;
+		p=strtok(NULL,";");
+	}
+
+	/* realloc one extra element for the last NULL */
+	res=realloc(res,sizeof (char*) * (n_spaces+1));
+	res[n_spaces]=0;
+
+	/* save the result */
+	for(i=0;i<(n_spaces) && i<7;++i)
+ 		strncpy(cOtherServers[i],res[i],99);
+	free(res);
+
+	return(n_spaces);
+
+}//unsigned uSplitOtherServerNames(char const *cVirtualPort,char cVirtualPorts[8][32])
+
+
 //Case sensitive name/value list
 // "io.rancher.service.launch.config":"io.rancher.service.primary.launch.config",...
 void ParseFromJsonList(char const *cList, char const *cName, char *cValue)
@@ -336,6 +368,14 @@ void voidCertbotDomains(void)
 				}
 				printf("%s ",cVirtualHost);
 			}
+
+			//cOtherServerNames=domain.dom.co;dom1.net;other.one.org;
+			char cOtherServerNames[256]={""};
+			char cOtherServers[8][100]={"","","","","","","",""};
+			ParseFromJsonArray(cData,"cOtherServerNames",cOtherServerNames);
+			unsigned uNumOfServers=uSplitOtherServerNames(cOtherServerNames,cOtherServers);
+			for(int n=0;n<uNumOfServers && n<8;n++)
+				printf("%s ",cOtherServers[n]);
 		}
 	}
 
@@ -409,7 +449,64 @@ int main(int iArgc, char *cArgv[])
 		}
 	}
 
-	unsigned uReloadNginx=0;
+//scoped function move TODO
+unsigned uReloadNginx=0;
+void ForEachVirtualHost(char *cVirtualHost,
+			char *cID,unsigned uNumPorts,
+			char cVirtualPorts[8][32],
+			char *cContainerName,
+			char *cContainerNameChat,
+			char *cContainerIp)
+{
+	char cSystem[1028];
+	sprintf(cSystem, "if [  -f /etc/nginx/conf.d/%1$s.conf ];then"
+				"    cp /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0;"
+				"fi",
+						cVirtualHost);
+	if(system(cSystem))
+	{
+		fprintf(stderr,"Could not copy /etc/nginx/conf.d/%s.conf\n",cVirtualHost);
+		exit(2);
+	}
+
+	FILE *fpServerConf;
+	char cFile[256]={""};
+	sprintf(cFile,"/etc/nginx/conf.d/%s.conf",cVirtualHost);
+	if((fpServerConf=fopen(cFile,"w"))==NULL)
+	{
+		fprintf(stderr,"Could not open %s\n",cFile);
+		exit(2);
+	}
+	printf("Opened %s for write\n",cFile);
+	fprintf(fpServerConf,"#cID=%s\n",cID);
+	register int n;
+	for(n=0;n<uNumPorts&&n<8;n++)
+	{
+		if(n==0)
+			UpstreamConfTemplate(fpServerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
+		else
+			UpstreamConfTemplate(fpServerConf,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
+	}
+	ServerConfTemplate(fpServerConf,cVirtualHost,cContainerName,cContainerNameChat);
+	fclose(fpServerConf);
+
+	sprintf(cSystem, "diff /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0 > /dev/null 2>&1",
+				cVirtualHost);
+	if(system(cSystem))
+	{
+		uReloadNginx=1;
+		printf("/etc/nginx/conf.d/%1$s.conf has changed\n",cVirtualHost);
+	}
+	printf("cID=%s\n",cID);
+	printf("cVirtualHost=%s\n",cVirtualHost);
+	printf("uNumPorts=%u\n",uNumPorts);
+	for(n=0;n<uNumPorts&&n<8;n++)
+	{
+		printf("cVirtualPorts[%d]=%s\n",n,cVirtualPorts[n]);
+	}
+}//void ForEachVirtualHost()
+
+
 	for(size_t i = 0, j = 1; j > 0; i++, j--)
 	{
 		jsmntok_t *t = &tokens[i];
@@ -456,6 +553,23 @@ int main(int iArgc, char *cArgv[])
 			//printf("\tcVirtualPort=%s\n",cVirtualPort);
 			//printf("\tcVirtualHost=%s\n",cVirtualHost);
 
+			//cOtherServerNames=domain.dom.co;dom1.net;other.one.org;
+			char cOtherServerNames[256]={""};
+			char cOtherServers[8][100]={"","","","","","","",""};
+			ParseFromJsonArray(cData,"cOtherServerNames",cOtherServerNames);
+			if(cOtherServerNames[0])
+			{
+				printf("cOtherServers: ");
+				unsigned uNumOfServers=uSplitOtherServerNames(cOtherServerNames,cOtherServers);
+				for(int n=0;n<uNumOfServers && n<8;n++)
+				{
+					printf("%s ",cOtherServers[n]);
+					ForEachVirtualHost(cOtherServers[n],cID,uNumPorts,cVirtualPorts,cContainerName,
+								cContainerNameChat,cContainerIp);
+				}
+				printf("\n");
+			}
+
 			if(cVirtualHost[0])
 			{
 
@@ -486,58 +600,11 @@ int main(int iArgc, char *cArgv[])
 					printf("skipping %s...\n",cVirtualHost);
 					continue;
 				}
-
-				char cSystem[1028];
-				sprintf(cSystem, "if [  -f /etc/nginx/conf.d/%1$s.conf ];then"
-						"    cp /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0;"
-						"fi",
-						cVirtualHost);
-				if(system(cSystem))
-				{
-					fprintf(stderr,"Could not copy /etc/nginx/conf.d/%s.conf\n",cVirtualHost);
-					exit(2);
-				}
-
-				FILE *fpServerConf;
-				char cFile[256]={""};
-				sprintf(cFile,"/etc/nginx/conf.d/%s.conf",cVirtualHost);
-				if((fpServerConf=fopen(cFile,"w"))==NULL)
-				{
-					fprintf(stderr,"Could not open %s\n",cFile);
-					exit(2);
-				}
-				printf("Opened %s for write\n",cFile);
-				fprintf(fpServerConf,"#cID=%s\n",cID);
-				register int n;
-				for(n=0;n<uNumPorts&&n<8;n++)
-				{
-					if(n==0)
-						UpstreamConfTemplate(fpServerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
-					else
-						UpstreamConfTemplate(fpServerConf,cContainerNameChat,cContainerIp,cVirtualPorts[n]);
-				}
-				ServerConfTemplate(fpServerConf,cVirtualHost,cContainerName,cContainerNameChat);
-				fclose(fpServerConf);
-
-				sprintf(cSystem, "diff /etc/nginx/conf.d/%1$s.conf /etc/nginx/conf.d/%1$s.conf.0 > /dev/null 2>&1",
-							cVirtualHost);
-				if(system(cSystem))
-				{
-					uReloadNginx=1;
-					printf("/etc/nginx/conf.d/%1$s.conf has changed\n",cVirtualHost);
-				
-				}
-				printf("cID=%s\n",cID);
-				printf("cVirtualHost=%s\n",cVirtualHost);
-				printf("cVirtualPort=%s\n",cVirtualPort);
-				printf("uNumPorts=%u\n",uNumPorts);
-				for(n=0;n<uNumPorts&&n<8;n++)
-				{
-					printf("cVirtualPorts[%d]=%s\n",n,cVirtualPorts[n]);
-				}
-			}
-		}
-	}
+				ForEachVirtualHost(cVirtualHost,cID,uNumPorts,cVirtualPorts,cContainerName,
+							cContainerNameChat,cContainerIp);
+			}//if cVirtualHost[0]
+		}//print token strings
+	}//for j
 
 	if(uReloadNginx)
 	{
