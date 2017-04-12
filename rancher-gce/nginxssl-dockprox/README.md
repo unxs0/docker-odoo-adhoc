@@ -15,6 +15,12 @@ for Odoo http and Odoo chat/IM traffic.
 
 Configures and maintains certbot/letsencrypt SSL certs
 
+New ENV cOtherServerNames support for alternate server names has been added.
+You may add via the adhoc-rancher catalog cOtherServerNames=alist.of.hosts;another.host.net;another2.host.org;
+You can add 8 semi-colon separated host names. For certbot to work A records must point to this server.
+
+If you are using your own SSL certs you must prepopulate your node /etc/letsencrypt/live dir with the correct files.
+
 ### dockprox program
 
 Very simple unix socket reader and JSON parser are used together with a simple template
