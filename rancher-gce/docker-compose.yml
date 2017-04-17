@@ -14,7 +14,8 @@ services:
             - "80:80"
         volumes:
             - /etc/letsencrypt:/etc/letsencrypt:rw
-        environment:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
             - CERTBOT_EMAIL=certbot@unxs.io
-            - CERTBOT_DOMAIN=rancher.sistemasadhoc.com
+            - CERTBOT_DOMAINS=rancher.sistemasadhoc.com
         restart: unless-stopped
