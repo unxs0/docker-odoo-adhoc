@@ -5,6 +5,7 @@ services:
         ports:
             - "8080:8080"
         restart: unless-stopped
+        command: --db-host 10.240.0.4
     certbot-nginx:
         depends_on:
           - rancher
