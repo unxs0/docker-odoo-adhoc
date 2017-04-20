@@ -480,7 +480,8 @@ void ForEachVirtualHost(char *cVirtualHost,
 	printf("Opened %s for write\n",cFile);
 	fprintf(fpServerConf,"#cID=%s\n",cID);
 	register int n;
-	for(n=0;n<uNumPorts&&n<8;n++)
+	//Allow uNumPorts to turn off this section by setting to -1 for example.
+	for(n=0;uNumPorts!=(-1)&&n<uNumPorts&&n<8;n++)
 	{
 		if(n==0)
 			UpstreamConfTemplate(fpServerConf,cContainerName,cContainerIp,cVirtualPorts[n]);
@@ -500,7 +501,7 @@ void ForEachVirtualHost(char *cVirtualHost,
 	printf("cID=%s\n",cID);
 	printf("cVirtualHost=%s\n",cVirtualHost);
 	printf("uNumPorts=%u\n",uNumPorts);
-	for(n=0;n<uNumPorts&&n<8;n++)
+	for(n=0;uNumPorts!=(-1)&&n<uNumPorts&&n<8;n++)
 	{
 		printf("cVirtualPorts[%d]=%s\n",n,cVirtualPorts[n]);
 	}
@@ -564,7 +565,8 @@ void ForEachVirtualHost(char *cVirtualHost,
 				for(int n=0;n<uNumOfServers && n<8;n++)
 				{
 					printf("%s ",cOtherServers[n]);
-					ForEachVirtualHost(cOtherServers[n],cID,uNumPorts,cVirtualPorts,cContainerName,
+					//Turn off duplicate upstream for other server names
+					ForEachVirtualHost(cOtherServers[n],cID,-1,cVirtualPorts,cContainerName,
 								cContainerNameChat,cContainerIp);
 				}
 				printf("\n");
