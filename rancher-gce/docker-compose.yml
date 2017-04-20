@@ -1,15 +1,22 @@
 version: '2'
 services:
     rancher:
-        image: rancher/server:stable
+        image: rancher/server:latest
         ports:
             - "8080:8080"
         restart: unless-stopped
-    custom-nginx:
+        command: --db-host 10.240.0.4
+    certbot-nginx:
         depends_on:
           - rancher
-        image: custom-nginx
+        image: unxsio/certbot-nginx
         ports:
             - "443:443"
             - "80:80"
+        volumes:
+            - /etc/letsencrypt:/etc/letsencrypt:rw
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        labels:
+            - CERTBOT_EMAIL=certbot@unxs.io
+            - CERTBOT_DOMAINS=rancher.sistemasadhoc.com
         restart: unless-stopped

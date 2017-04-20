@@ -2,7 +2,7 @@ FROM ubuntu
 MAINTAINER docker@unxs.io
 USER root
 RUN apt-get update && apt-get -y -q --no-install-recommends install \
-	nginx python iputils-ping telnet net-tools cron supervisor wget tar \
+	nginx python iputils-ping telnet net-tools cron supervisor wget tar libcurl3 libcurl3-gnutls\
 	&& apt-get clean \
 	&& rm -r /var/lib/apt/lists/*
 #certbot
@@ -11,8 +11,9 @@ RUN cd /root && \
 	chmod a+x certbot-auto
 RUN /root/certbot-auto --os-packages-only --non-interactive
 RUN mkdir -p /var/local/certbot
+COPY ./dockprox /usr/sbin/dockprox
 COPY ./certbot.cron /var/local/certbot/certbot.cron
-COPY ./certbot.sh /var/local/certbot/certbot.sh
+COPY ./certbot.sh /usr/local/certbot/certbot.sh
 RUN /usr/bin/crontab /var/local/certbot/certbot.cron
 #nginx
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -24,4 +25,4 @@ COPY ./supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord","-n"]
 
 #docker build -t unxsio/certbot-nginx .
-#docker run --restart unless-stopped -e "CERTBOT_EMAIL=certbot@unxs.io" -e "CERTBOT_DOMAIN=rancher.sistemasadhoc.com" --name certbot-nginx -p 443:443 -p 80:80 -d unxsio/certbot-nginx
+#docker run --restart unless-stopped --label CERTBOT_DOMAINS=rancher.sistemasadhoc.com --label CERTBOT_EMAIL=certbot@unxs.io -v /etc/letsencrypt:/etc/letsencrypt:rw -v /var/run/docker.sock:/var/run/docker.sock:ro -p 443:443 -p 80:80 -d unxsio/certbot-nginx

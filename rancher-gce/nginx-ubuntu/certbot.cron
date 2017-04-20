@@ -1,2 +1,2 @@
 #get initial cert and then check for cert renewal everyhour
-15 * * * *  /usr/local/certbot/certbot.sh > /tmp/certbot.sh.cron.log 2>&1;
+7 * * * *  /usr/local/certbot/certbot.sh > /tmp/certbot.sh.cron.log 2>&1;
