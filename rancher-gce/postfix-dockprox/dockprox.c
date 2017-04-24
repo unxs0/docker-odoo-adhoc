@@ -214,8 +214,14 @@ void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 }//void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 
 
-int main(void)
+int main(int iArgc, char *cArgv[])
 {
+
+	if(iArgc==2 && !strcmp(cArgv[1],"--version"))
+	{
+		printf("%s version %s\n",cArgv[0],GitVersion);
+		exit(0);
+	}
 
 	FILE *fpVirtualAliases;
 	if((fpVirtualAliases=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
