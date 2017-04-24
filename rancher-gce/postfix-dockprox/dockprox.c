@@ -435,12 +435,13 @@ int main(void)
 
 			GetDataByContainerId(cID,"Env",cData);
 			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
-			ParseFromJsonArray(cData,"ADMIN_PASSWORD",cAdminPassword);
 			//printf("\tcVirtualHost=%s\n",cVirtualHost);
-			printf("\tcAdminPassword=%s\n",cAdminPassword);
 
 			if(cVirtualHost[0])
 			{
+				ParseFromJsonArray(cData,"ADMIN_PASSWORD",cAdminPassword);
+				printf("\tcAdminPassword=%s\n",cAdminPassword);
+
 				char *cp;
 				if(cStackName[0] && gcGCDNSZone[0] && (cp=strstr(cVirtualHost,"{io.rancher.stack.name}")))
 				{
