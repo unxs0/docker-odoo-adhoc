@@ -392,6 +392,11 @@ int main(int iArgc, char *cArgv[])
 		voidCertbotDomains();
 		exit(0);
 	}
+	else if(iArgc==2 && !strcmp(cArgv[1],"--version"))
+	{
+		printf("%s version %s\n",cArgv[0],GitVersion);
+		exit(0);
+	}
 
 	if(iArgc==3 && !strcmp(cArgv[1],"--certbot-update"))
 	{

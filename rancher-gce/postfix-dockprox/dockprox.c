@@ -416,6 +416,7 @@ int main(void)
 			char cStackName[256]={""};
 			char cContainerIp[256]={""};
 			char cVirtualHost[256]={""};
+			char cAdminPassword[256]={""};
 
 			jsmntok_t *t2 = &tokens[i+1];
 			char *cID= json_token_tostr(cJson, t2);
@@ -434,7 +435,9 @@ int main(void)
 
 			GetDataByContainerId(cID,"Env",cData);
 			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
+			ParseFromJsonArray(cData,"ADMIN_PASSWORD",cAdminPassword);
 			//printf("\tcVirtualHost=%s\n",cVirtualHost);
+			printf("\tcAdminPassword=%s\n",cAdminPassword);
 
 			if(cVirtualHost[0])
 			{
@@ -471,8 +474,8 @@ int main(void)
 				char cStdDbName[256]={"default"};
 				fprintf(fpEtcAliases,"#cID=%s cContainerName=%s\n",cID,cContainerName);
 				fprintf(fpEtcAliases,
-					"%.64s: \"| /opt/odoo/openerp_mailgate.py  --host=%.64s --port=8069 -d %.64s\"\n",
-						cVirtualHost,cContainerIp,cStdDbName);
+					"%.64s: \"| /opt/odoo/openerp_mailgate.py  --host=%.64s --port=8069 -u 1 -p %s -d %.64s\"\n",
+						cVirtualHost,cContainerIp,cAdminPassword,cStdDbName);
 			}
 		}
 	}
