@@ -214,8 +214,14 @@ void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 }//void GetDataByContainerId(char const *cId, char const *cName, char *cData)
 
 
-int main(void)
+int main(int iArgc, char *cArgv[])
 {
+
+	if(iArgc==2 && !strcmp(cArgv[1],"--version"))
+	{
+		printf("%s version %s\n",cArgv[0],GitVersion);
+		exit(0);
+	}
 
 	FILE *fpVirtualAliases;
 	if((fpVirtualAliases=fopen("/etc/postfix/virtual_aliases.new","w"))==NULL)
@@ -435,12 +441,13 @@ int main(void)
 
 			GetDataByContainerId(cID,"Env",cData);
 			ParseFromJsonArray(cData,"VIRTUAL_HOST",cVirtualHost);
-			ParseFromJsonArray(cData,"ADMIN_PASSWORD",cAdminPassword);
 			//printf("\tcVirtualHost=%s\n",cVirtualHost);
-			printf("\tcAdminPassword=%s\n",cAdminPassword);
 
 			if(cVirtualHost[0])
 			{
+				ParseFromJsonArray(cData,"ADMIN_PASSWORD",cAdminPassword);
+				printf("\tcAdminPassword=%s\n",cAdminPassword);
+
 				char *cp;
 				if(cStackName[0] && gcGCDNSZone[0] && (cp=strstr(cVirtualHost,"{io.rancher.stack.name}")))
 				{
