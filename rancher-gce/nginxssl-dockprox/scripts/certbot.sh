@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#Un comment to use fake test certs
+#cStaging="--staging";
+
 #domains come and go
 #plus we need to use a self signed cert the first time
 #ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
@@ -24,7 +27,7 @@ for cDomain in `/usr/sbin/dockprox --certbot-domains`;do
 	fi
 
 	#maintain or install new cert
-	/root/certbot-auto certonly --staging --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
+	/root/certbot-auto certonly $cStaging --nginx --email certbot@unxs.io --agree-tos --non-interactive -d $cDomain >> /tmp/certbot.log 2>&1;
 	if [ "$?" == "0" ];then
 		echo "certbot-auto ok: configure domain for certbot" >> /tmp/certbot.log;
 		/usr/sbin/dockprox --certbot-update $cDomain >> /tmp/certbot.log 2>&1;
